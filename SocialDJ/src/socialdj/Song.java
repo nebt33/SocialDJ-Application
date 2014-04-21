@@ -1,4 +1,4 @@
-package socialdj.library;
+package socialdj;
 
 public class Song {
 	private String id;

@@ -11,6 +11,7 @@ import java.util.List;
 import socialdj.ConnectedSocket;
 import socialdj.MessageHandler;
 import socialdj.SendMessage;
+import socialdj.Song;
 import socialdj.config.R;
 import android.app.Activity;
 import android.os.AsyncTask;

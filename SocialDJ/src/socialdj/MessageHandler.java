@@ -8,7 +8,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import socialdj.library.Song;
 
 public class MessageHandler implements Runnable {
 
@@ -18,12 +17,29 @@ public class MessageHandler implements Runnable {
 	
     //List for views
 	static List<Song> songs = Collections.synchronizedList(new ArrayList<Song>());
-		/*List<Artist> artists = Collections.synchronizedList(new ArrayList<Artist>());
-		  List<Album> albums = Collections.synchronizedList(new ArrayList<Album>());*/
-    //static List<QueueElement> queueElements = Collections.synchronizedList(new ArrayList<QueueElements>());
+	static List<Artist> artists = Collections.synchronizedList(new ArrayList<Artist>());
+	static List<Album> albums = Collections.synchronizedList(new ArrayList<Album>());
+    static List<QueueElement> queueElements = Collections.synchronizedList(new ArrayList<QueueElement>());
+    static boolean musicState = false;
 	
 	public static List<Song> getSongs() {
 		return songs;
+	}
+	
+	public static List<Artist> getArtists() {
+		return artists;
+	}
+	
+	public static List<Album> getAlbums() {
+		return albums;
+	}
+	
+	public static List<QueueElement> getQueueElements() {
+		return queueElements;
+	}
+	
+	public static boolean getMusicState() {
+		return musicState;
 	}
 	
 	@Override
@@ -53,6 +69,7 @@ public class MessageHandler implements Runnable {
 					case "download_success":
 						break;
 					case "new_song":
+						newSong(inputLine);
 						break;
 					case "song_info":
 						songInfo(inputLine);
@@ -61,15 +78,19 @@ public class MessageHandler implements Runnable {
 						forgetSong(inputLine);
 						break;
 					case "new_album":
+						newAlbum(inputLine);
 						break;
 					case "album_info":
+						AlbumInfo(inputLine);
 						break;
 					case "forget_album":
 						forgetAlbum(inputLine);
 						break;
 					case "new_artist":
+						newArtist(inputLine);
 						break;
 					case "artist_info":
+						artistInfo(inputLine);
 						break;
 					case "forget_artist":
 						forgetArtist(inputLine);
@@ -84,10 +105,13 @@ public class MessageHandler implements Runnable {
 						score(inputLine);
 						break;
 					case "playing":
+						musicState = true;
 						break;
 					case "paused":
+						musicState = false;
 						break;
 					case "skip":
+						//implement skip - talk to david
 						break;
 					}
 
@@ -102,12 +126,118 @@ public class MessageHandler implements Runnable {
 		
 		//clear data
 		songs.clear();
-		/*
-		 * artists.clear();
-		 * albums.clear();
-		 * queueElements.clear();
-		 */
+		artists.clear();
+		albums.clear();
+		queueElements.clear();
+		 
 		
+	}
+	
+	/**
+	 * Creates a new Artist and will sort that artist into the list by id.
+	 * @param inputLine
+	 */
+	public void newArtist(String inputLine) {
+		List<String> temp = Arrays.asList(inputLine.split("\\|"));
+		String id = temp.get(1);
+
+		Artist artist = new Artist(id);
+
+		//search list for album to enter into correct spot
+		synchronized (artists) {
+			Artist previousArtist = null;
+			Artist nextArtist = null;
+			boolean inserted = false;
+			for(int i = 0; i < artists.size(); i++) {
+				if(Integer.parseInt(artist.getArtistId()) > Integer.parseInt(artists.get(i).getArtistId())) {
+					previousArtist = artists.get(i);
+					artists.set(i,artist);
+					inserted = true;
+				}
+				//re order list based on id
+				else if(inserted) {
+					nextArtist = artists.get(i);
+					artists.set(i, previousArtist);
+				}
+				else if(i == artists.size() - 1)
+					artists.add(artist);
+			}
+		}
+	}
+	
+	/**
+	 * Updates artist fields with name of artist
+	 * @param inputLine
+	 */
+	public void artistInfo(String inputLine) {
+		List<String> temp = Arrays.asList(inputLine.split("\\|"));
+		String id = temp.get(1);
+		String artistName = temp.get(2);
+		
+		synchronized (artists) {
+			for(Artist artist: artists) {
+				if(artist.getArtistId().equalsIgnoreCase(id)){
+					artist.setArtistName(artistName);
+					break;
+				}
+			}
+		}
+	}
+	
+	/**
+	 * Creates a new album and will sort that album into the list by id.
+	 * @param inputLine
+	 */
+	public void newAlbum(String inputLine) {
+		List<String> temp = Arrays.asList(inputLine.split("\\|"));
+		String id = temp.get(1);
+
+		Album album = new Album(id);
+
+		//search list for album to enter into correct spot
+		synchronized (albums) {
+			Album previousAlbum = null;
+			Album nextAlbum = null;
+			boolean inserted = false;
+			for(int i = 0; i < albums.size(); i++) {
+				if(Integer.parseInt(album.getAlbumId()) > Integer.parseInt(albums.get(i).getAlbumId())) {
+					previousAlbum = albums.get(i);
+					albums.set(i,album);
+					inserted = true;
+				}
+				//re order list based on id
+				else if(inserted) {
+					nextAlbum = albums.get(i);
+					albums.set(i, previousAlbum);
+				}
+				else if(i == albums.size() - 1)
+					albums.add(album);
+			}
+		}
+	}
+	
+	/**
+	 * Updates album info with songs' id
+	 * @param inputLine
+	 */
+	public void AlbumInfo(String inputLine) {
+		//split inputLine up
+		List<String> temp = Arrays.asList(inputLine.split("\\|"));
+		String id = temp.get(1);
+		String albumName= temp.get(2);
+		String metaItem = "";
+		//search list for album to enter into correct spot
+		synchronized (albums) {
+			for(Album album: albums) {
+				if(album.getAlbumId().equalsIgnoreCase(id)){
+					album.setAlbumName(albumName);
+					for(int i = 3; i < temp.size(); i++) {
+						album.addSong(temp.get(i));
+					}
+					break;
+				}
+			}
+		}
 	}
 	
 	/**
@@ -129,12 +259,14 @@ public class MessageHandler implements Runnable {
 		}
 		
 		//remove song from queue if in queue
-		/*synchronized(queueElements) {
-		    for(QueueElements q : queueElements) {
-			  if(Integer.parseInt(q.getSongId()) == Integer.parseInt(id))
+		synchronized(queueElements) {
+		    for(QueueElement q : queueElements) {
+			  if(Integer.parseInt(q.getSongId()) == Integer.parseInt(id)) {
 				songs.remove(q);
+				break;
+			  }
 			}
-		}*/
+		}
 	}
 	
 	/**
@@ -146,14 +278,14 @@ public class MessageHandler implements Runnable {
 		List<String> temp = Arrays.asList(inputLine.split("\\|"));
 		String id = temp.get(1);
 		
-		/*synchronized(albums) {
+		synchronized(albums) {
 		    for(Album a: albums) {
 			  if(Integer.parseInt(a.getAlbumId()) == Integer.parseInt(id)) {
 				albums.remove(a);
 				break;
 			  }
 		  }
-		}*/
+		}
 	}
 	
 	/**
@@ -164,14 +296,14 @@ public class MessageHandler implements Runnable {
 		List<String> temp = Arrays.asList(inputLine.split("\\|"));
 		String id = temp.get(1);
 		
-		/*synchronized (artists) {
+		synchronized (artists) {
 			for(Artist a: artists) {
 				if(Integer.parseInt(a.getArtistId()) == Integer.parseInt(id)) {
 					artists.remove(a);
 					break;
 				}
 			}
-		}*/
+		}
 	}
 	
 	/**
@@ -183,25 +315,34 @@ public class MessageHandler implements Runnable {
 		String id = temp.get(1);
 		boolean inserted = true;
 		
-		//QueueElement q = new QueueElement();
-		  //once queueElement is written, assign correct values-------------------------------------------
+		QueueElement element = new QueueElement();
+		element.setSongId(id);
+		for(Song s: songs) {
+			if(id.equalsIgnoreCase(s.getSongId())) {
+				element.setSongTitle(s.getSongTitle());
+				element.setArtistName(s.getArtistName());
+				element.setAlbumName(s.getAlbumName());
+				element.setSongDuration(s.getSongDuration());
+				break;
+			}
+		}
 
 		//song will always be cached because server sends song information first
-		/*synchronized (queueElements) {
+		synchronized (queueElements) {
 		    for(QueueElement q: queueElements) {
 		      if(Integer.parseInt(q.getSongId()) > Integer.parseInt(id)){
-			   queueElements.add(q);
+			   queueElements.add(element);
 			   inserted = false;
 			   break;
 		      }
 	        }
-	      }*/
+	      }
 		
-		/*if(!inserted) {
+		if(!inserted) {
 			synchronized (queueElements) {
-				queueElementes.add(q);
+				queueElements.add(element);
 			}
-		}*/
+		}
 	}
 	
 	/**
@@ -212,14 +353,14 @@ public class MessageHandler implements Runnable {
 		List<String> temp = Arrays.asList(inputLine.split("\\|"));
 		String id = temp.get(1);
 		
-		/*synchronized (queueElements) {
+		synchronized (queueElements) {
 		    for(QueueElement q: queueElements) {
 			  if(Integer.parseInt(q.getSongId()) == Integer.parseInt(id)){
 				queueElements.remove(q);
 				break;
 			  }
 		  }
-		}*/
+		}
 	}
 	
 	/**
@@ -231,14 +372,14 @@ public class MessageHandler implements Runnable {
 		String id = temp.get(1);
 		String score = temp.get(2);
 		
-		/*synchronized (queueElements) {
+		synchronized (queueElements) {
 		    for(QueueElement q : queueElements) {
 			  if(Integer.parseInt(q.getSongId()) == Integer.parseInt(id)) {
-				q.setScore(score);
+				q.setScore(Integer.parseInt(score));
 				break;
 			  }
 		  }
-		}*/
+		}
 	}
 	
 	/**
@@ -266,7 +407,7 @@ public class MessageHandler implements Runnable {
 					nextSong = songs.get(i);
 					songs.set(i, previousSong);
 				}
-				else if(i < songs.size() - 1)
+				else if(i == songs.size() - 1)
 					songs.add(song);
 			}
 		}
@@ -302,6 +443,7 @@ public class MessageHandler implements Runnable {
 						else if(metaItem.equalsIgnoreCase("duration"))
 							song.setSongDuration(s);
 					}
+					break;
 				}
 			}
 		}
