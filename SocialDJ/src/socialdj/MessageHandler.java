@@ -129,6 +129,7 @@ public class MessageHandler implements Runnable {
 		artists.clear();
 		albums.clear();
 		queueElements.clear();
+		musicState = false;
 		 
 		
 	}
@@ -145,23 +146,16 @@ public class MessageHandler implements Runnable {
 
 		//search list for album to enter into correct spot
 		synchronized (artists) {
-			Artist previousArtist = null;
-			Artist nextArtist = null;
 			boolean inserted = false;
 			for(int i = 0; i < artists.size(); i++) {
 				if(Integer.parseInt(artist.getArtistId()) > Integer.parseInt(artists.get(i).getArtistId())) {
-					previousArtist = artists.get(i);
-					artists.set(i,artist);
+					artists.add(i,artist);
 					inserted = true;
 				}
-				//re order list based on id
-				else if(inserted) {
-					nextArtist = artists.get(i);
-					artists.set(i, previousArtist);
-				}
-				else if(i == artists.size() - 1)
-					artists.add(artist);
 			}
+			
+			if(!inserted)
+				artists.add(artist);
 		}
 	}
 	
@@ -196,23 +190,16 @@ public class MessageHandler implements Runnable {
 
 		//search list for album to enter into correct spot
 		synchronized (albums) {
-			Album previousAlbum = null;
-			Album nextAlbum = null;
 			boolean inserted = false;
 			for(int i = 0; i < albums.size(); i++) {
 				if(Integer.parseInt(album.getAlbumId()) > Integer.parseInt(albums.get(i).getAlbumId())) {
-					previousAlbum = albums.get(i);
-					albums.set(i,album);
+					albums.add(i,album);
 					inserted = true;
 				}
-				//re order list based on id
-				else if(inserted) {
-					nextAlbum = albums.get(i);
-					albums.set(i, previousAlbum);
-				}
-				else if(i == albums.size() - 1)
-					albums.add(album);
 			}
+			
+			if(!inserted) 
+				albums.add(album);
 		}
 	}
 	
@@ -327,11 +314,10 @@ public class MessageHandler implements Runnable {
 			}
 		}
 
-		//song will always be cached because server sends song information first
 		synchronized (queueElements) {
-		    for(QueueElement q: queueElements) {
-		      if(Integer.parseInt(q.getSongId()) > Integer.parseInt(id)){
-			   queueElements.add(element);
+		    for(int i = 0; i < queueElements.size(); i++) {
+		      if(element.getScore() > queueElements.get(i).getScore()){
+			   queueElements.add(i, element);
 			   inserted = false;
 			   break;
 		      }
@@ -393,23 +379,16 @@ public class MessageHandler implements Runnable {
 
 		//search list for song to enter into correct spot
 		synchronized (songs) {
-			Song previousSong = null;
-			Song nextSong = null;
 			boolean inserted = false;
 			for(int i = 0; i < songs.size(); i++) {
 				if(Integer.parseInt(song.getSongId()) > Integer.parseInt(songs.get(i).getSongId())) {
-					previousSong = songs.get(i);
-					songs.set(i,song);
+					songs.add(i,song);
 					inserted = true;
 				}
-				//re order list based on id
-				else if(inserted) {
-					nextSong = songs.get(i);
-					songs.set(i, previousSong);
-				}
-				else if(i == songs.size() - 1)
-					songs.add(song);
 			}
+			
+			if(!inserted)
+				songs.add(song);
 		}
 	}
 	
