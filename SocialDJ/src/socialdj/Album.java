@@ -2,7 +2,7 @@ package socialdj;
 
 import java.util.ArrayList;
 
-public class Album {
+public class Album implements Comparable<Album> {
 	private String id;
 	private String albumName;
 	ArrayList<String> songs;
@@ -39,5 +39,10 @@ public class Album {
 	
 	public String getAlbumName(){
 		return albumName;
+	}
+
+	@Override
+	public int compareTo(Album album) {
+		return album.getAlbumName().compareTo(this.getAlbumName());
 	}
 }

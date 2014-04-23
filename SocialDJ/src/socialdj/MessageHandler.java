@@ -175,6 +175,7 @@ public class MessageHandler implements Runnable {
 					break;
 				}
 			}
+			Collections.sort(artists);
 		}
 	}
 	
@@ -224,6 +225,7 @@ public class MessageHandler implements Runnable {
 					break;
 				}
 			}
+			Collections.sort(albums);
 		}
 	}
 	
@@ -359,12 +361,15 @@ public class MessageHandler implements Runnable {
 		String score = temp.get(2);
 		
 		synchronized (queueElements) {
-		    for(QueueElement q : queueElements) {
-			  if(Integer.parseInt(q.getSongId()) == Integer.parseInt(id)) {
-				q.setScore(Integer.parseInt(score));
-				break;
-			  }
-		  }
+			for(QueueElement q : queueElements) {
+				if(Integer.parseInt(q.getSongId()) == Integer.parseInt(id)) {
+					q.setScore(Integer.parseInt(score));
+					break;
+				}
+			}
+		    
+			//sort elements by votes in decending order
+			Collections.sort(queueElements);   
 		}
 	}
 	
@@ -425,6 +430,8 @@ public class MessageHandler implements Runnable {
 					break;
 				}
 			}
+			//sort songs alphbetically
+			Collections.sort(songs);
 		}
 	}
 }

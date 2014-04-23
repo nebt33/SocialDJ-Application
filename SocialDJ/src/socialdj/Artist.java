@@ -1,6 +1,6 @@
 package socialdj;
 
-public class Artist {
+public class Artist implements Comparable<Artist> {
 	private String id;
 	private String artistName;
 	
@@ -22,5 +22,10 @@ public class Artist {
 
 	public String getArtistName() {
 		return artistName;
+	}
+
+	@Override
+	public int compareTo(Artist artist) {
+		return artist.getArtistName().compareTo(this.getArtistName());
 	}
 }

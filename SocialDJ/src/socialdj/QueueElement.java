@@ -1,6 +1,6 @@
 package socialdj;
 
-public class QueueElement {
+public class QueueElement implements Comparable<QueueElement> {
 	private String id;
 	private String songTitle;
 	private String artistName;
@@ -10,6 +10,12 @@ public class QueueElement {
 	
 	public QueueElement() {
 		this.score = 0;
+	}
+	
+	@Override
+	public int compareTo(QueueElement compareElement) {
+		int compareScore = ((QueueElement)compareElement).getScore();
+		return compareScore - this.score;
 	}
 	
 	public void setScore(int score) {

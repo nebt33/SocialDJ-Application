@@ -1,6 +1,6 @@
 package socialdj;
 
-public class Song {
+public class Song implements Comparable<Song> {
 	private String id;
 	private String songTitle;
 	private String artistName;
@@ -15,6 +15,10 @@ public class Song {
 		this.songDuration = "";
 	}
 	
+	@Override
+	public int compareTo(Song song) {
+		return song.getSongTitle().compareTo(this.getSongTitle());
+	}
 	
 	public void setSongTitle(String songTitle) {
 		this.songTitle = songTitle;
