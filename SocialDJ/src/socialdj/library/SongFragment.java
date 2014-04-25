@@ -74,14 +74,14 @@ public class SongFragment extends ListFragment {
 		}
 	}
 
-	@Override
+	/*@Override
 	public void onSaveInstanceState(Bundle state) {
 		super.onSaveInstanceState(state);
 		int listPosition = getListView().getFirstVisiblePosition();
 		if (listPosition > 0) {
 			state.putInt(PROP_TOP_ITEM, listPosition);
 		}
-	}
+	}*/
 
 	/**
 	 * Listener which handles the endless list.  It is responsible for
@@ -100,11 +100,14 @@ public class SongFragment extends ListFragment {
 			 * that this method is called each time the loadMore is reached and scroll
 			 * pressed
 			 */
+			/*System.out.println("loadMore: " + loadMore);
+			System.out.println("totalSizetoBe: " + totalSizeToBe);
+			System.out.println("totalItemCount: " + totalItemCount);*/
 			if(loadMore && totalSizeToBe <= totalItemCount) {
 				totalSizeToBe += INCREMENT_TOTAL_MINIMUM_SIZE;
 				//calls more elements
 				GetSongTask task = new GetSongTask();
-				task.execute(new Integer[] {totalItemCount, BLOCK_SIZE+totalItemCount});
+				task.execute(new Integer[] {totalItemCount, BLOCK_SIZE});
 			}
 		}
 
@@ -137,32 +140,33 @@ public class SongFragment extends ListFragment {
 				listTopPosition = params[TOP_ITEM_INDEX];
 
 			//excute network call
-			PrintWriter out = null;
-			try {
-				out = new PrintWriter(ConnectedSocket.getSocket().getOutputStream());
-			} catch (IOException e) {e.printStackTrace();}
-			out.write("ALLSONGS|" + params[0] + "|" + params[1] + "\n");
-			out.flush();
-			BufferedReader in = null;
-			try {
-				in = new BufferedReader( 
-						new InputStreamReader(ConnectedSocket.getSocket().getInputStream()));
-
-				String inputLine; 
-				while ((inputLine = in.readLine()) != null) 
-				{ 
-					if(inputLine.equalsIgnoreCase("ENDOPERATION"))
-						break;
-					List<String> temp = Arrays.asList(inputLine.split("\\|"));
-
-					/*Song row = new Song();
-					row.setSongTitle(temp.get(0));
-					row.setArtistName(temp.get(1));
-					row.setSongDuration(temp.get(2));
-					results.add(row);*/
-				}
-			} catch (IOException e) {e.printStackTrace();}
-
+			System.out.println("line 143: " + MessageHandler.getSongs().size());
+			if(MessageHandler.getSongs().size() < params[0] + params[1]) {
+				PrintWriter out = null;
+				try {
+					out = new PrintWriter(ConnectedSocket.getSocket().getOutputStream());
+				} catch (IOException e) {e.printStackTrace();}
+				out.write("list_songs|" + params[0] + "|" + params[1] + "\n");
+				out.flush();
+				try {
+					System.out.println(MessageHandler.getSongs().size());
+					System.out.println(params[1]);
+					int start = MessageHandler.getSongs().size();
+					int end = start + params[1];
+					while(start < end) {
+						start = MessageHandler.getSongs().size();
+						Thread.sleep(10);
+					}
+					System.out.println(MessageHandler.getSongs().size());
+				} catch (InterruptedException e) {e.printStackTrace();}
+			}
+			
+			synchronized(MessageHandler.getSongs()) {
+				for(int i = params[0]; i < ((params[0] + params[1])); i++) 
+					results.add(MessageHandler.getSongs().get(i));
+			}
+			//return MessageHandler.getSongs();
+			System.out.println("results.size(): " + results.size());
 			return results;
 		}
 
@@ -170,13 +174,11 @@ public class SongFragment extends ListFragment {
 		protected void onPostExecute(List<Song> result) {
 			adapter.setNotifyOnChange(true);
 			for(Song item: result) {
-				//check if item was added
 				synchronized(adapter) {
-					if(!adapter.contains(item)) {
-						adapter.add(item);
-					}
+					adapter.add(item);
 				}
 			}
+			System.out.println("adapter count: " + adapter.getCount());
 
 			//loading is done
 			isLoading = false;

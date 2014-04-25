@@ -58,6 +58,7 @@ public class MessageHandler implements Runnable {
 				String inputLine = null; 
 				while ((inputLine = in.readLine()) != null) 
 				{ 
+					//System.out.println(inputLine);
 					List<String> temp = Arrays.asList(inputLine.split("\\|"));
 					String operation = temp.get(0);
 					//---determine operation
@@ -389,6 +390,7 @@ public class MessageHandler implements Runnable {
 				if(Integer.parseInt(song.getSongId()) > Integer.parseInt(songs.get(i).getSongId())) {
 					songs.add(i,song);
 					inserted = true;
+					break;
 				}
 			}
 			

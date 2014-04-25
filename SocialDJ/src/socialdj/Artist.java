@@ -26,6 +26,6 @@ public class Artist implements Comparable<Artist> {
 
 	@Override
 	public int compareTo(Artist artist) {
-		return artist.getArtistName().compareTo(this.getArtistName());
+		return this.getArtistName().compareTo(artist.getArtistName());
 	}
 }

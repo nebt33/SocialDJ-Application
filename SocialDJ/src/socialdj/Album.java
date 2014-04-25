@@ -43,6 +43,6 @@ public class Album implements Comparable<Album> {
 
 	@Override
 	public int compareTo(Album album) {
-		return album.getAlbumName().compareTo(this.getAlbumName());
+		return this.getAlbumName().compareTo(album.getAlbumName());
 	}
 }
