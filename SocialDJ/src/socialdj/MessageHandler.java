@@ -149,9 +149,10 @@ public class MessageHandler implements Runnable {
 		synchronized (artists) {
 			boolean inserted = false;
 			for(int i = 0; i < artists.size(); i++) {
-				if(Integer.parseInt(artist.getArtistId()) > Integer.parseInt(artists.get(i).getArtistId())) {
-					artists.add(i,artist);
+				//if artist already exist
+				if(Integer.parseInt(artist.getArtistId()) == Integer.parseInt(artists.get(i).getArtistId())) {
 					inserted = true;
+					break;
 				}
 			}
 			
@@ -194,9 +195,10 @@ public class MessageHandler implements Runnable {
 		synchronized (albums) {
 			boolean inserted = false;
 			for(int i = 0; i < albums.size(); i++) {
-				if(Integer.parseInt(album.getAlbumId()) > Integer.parseInt(albums.get(i).getAlbumId())) {
-					albums.add(i,album);
+				//if album already exist, break
+				if(Integer.parseInt(album.getAlbumId()) == Integer.parseInt(albums.get(i).getAlbumId())) {
 					inserted = true;
+					break;
 				}
 			}
 			
@@ -387,8 +389,8 @@ public class MessageHandler implements Runnable {
 		synchronized (songs) {
 			boolean inserted = false;
 			for(int i = 0; i < songs.size(); i++) {
-				if(Integer.parseInt(song.getSongId()) > Integer.parseInt(songs.get(i).getSongId())) {
-					songs.add(i,song);
+				//if there is a song with that id already, break
+				if(Integer.parseInt(song.getSongId()) == Integer.parseInt(songs.get(i).getSongId())) {
 					inserted = true;
 					break;
 				}

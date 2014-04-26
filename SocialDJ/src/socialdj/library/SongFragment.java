@@ -1,11 +1,8 @@
 package socialdj.library;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import socialdj.ConnectedSocket;
@@ -52,7 +49,7 @@ public class SongFragment extends ListFragment {
 		super.onActivityCreated(savedInstanceState);
 
 		//Populate list
-		adapter = new CustomSongAdapter(getActivity(), R.layout.all_songs, new ArrayList<Song>());
+		adapter = new CustomSongAdapter(getActivity(), R.layout.songs_list, new ArrayList<Song>());
 
 		//asynchronously initial list
 		GetSongTask task = new GetSongTask();
@@ -175,7 +172,8 @@ public class SongFragment extends ListFragment {
 			adapter.setNotifyOnChange(true);
 			for(Song item: result) {
 				synchronized(adapter) {
-					adapter.add(item);
+					//if(!adapter.contains(item))
+					  adapter.add(item);
 				}
 			}
 			System.out.println("adapter count: " + adapter.getCount());
@@ -209,7 +207,7 @@ public class SongFragment extends ListFragment {
 
 		public boolean contains(Song item) {
 			for(Song r: items){
-				if(r.getSongTitle().equals(item.getSongTitle()) && r.getArtistName().equals(item.getArtistName())) {
+				if(r.getSongId().equals(item.getSongId())) {
 					return true;
 				}
 			}

@@ -140,7 +140,6 @@ ActionBar.TabListener {
 			case 1:
 				return new AlbumFragment();
 			case 2:
-				System.out.println("CREATING A NEW SONG FRAGMENT");
 				return new SongFragment();
 			}
 			

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="socialdj.config"
+    android:screenOrientation="portrait"
     android:versionCode="1"
-    android:versionName="1.0" 
-    android:screenOrientation="portrait">
+    android:versionName="1.0" >
 
     <uses-sdk
         android:minSdkVersion="14"
@@ -26,6 +26,10 @@
         <activity android:name="socialdj.library.LibraryFragmentActivity" >
         </activity>
         <activity android:name="socialdj.connect.ConnectActivity" >
+        </activity>
+        <activity
+            android:name="socialdj.library.SongActivity"
+            android:label="@string/title_activity_song" >
         </activity>
     </application>
 
