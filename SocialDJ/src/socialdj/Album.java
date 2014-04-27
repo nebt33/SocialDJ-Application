@@ -5,13 +5,13 @@ import java.util.ArrayList;
 public class Album implements Comparable<Album> {
 	private String id;
 	private String albumName;
-	private String artistName;
+	private String artistId;
 	ArrayList<String> songs;
 	
 	public Album(String id) {
 		this.id = id;
 		albumName = "";
-		artistName = "";
+		artistId = "";
 		songs = new ArrayList<String>();
 	}
 	
@@ -27,12 +27,12 @@ public class Album implements Comparable<Album> {
 			}
 	}
 	
-	public String getArtistName() {
-		return artistName;
+	public String getArtistId() {
+		return artistId;
 	}
 	
-	public void setArtistName(String artistName) {
-		this.artistName = artistName;
+	public void setArtistId(String artistId) {
+		this.artistId = artistId;
 	}
 	
 	public String getAlbumId() {

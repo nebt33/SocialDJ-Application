@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Set;
 
 import socialdj.Album;
+import socialdj.Artist;
 import socialdj.ConnectedSocket;
 import socialdj.MessageHandler;
 import socialdj.SendMessage;
@@ -66,7 +67,7 @@ public class AlbumFragment extends ListFragment {
 		GetSongTask task = new GetSongTask();
 
 		setListAdapter(adapter);
-		getListView().setOnScrollListener(new SongListScrollListener());
+		getListView().setOnScrollListener(new AlbumListScrollListener());
 
 		if(savedInstanceState != null) {
 			//Restore last state from top list position
@@ -94,7 +95,7 @@ public class AlbumFragment extends ListFragment {
 	 * Listener which handles the endless list.  It is responsible for
 	 * determining when the network calls will be asynchronously.
 	 */
-	class SongListScrollListener implements OnScrollListener {
+	class AlbumListScrollListener implements OnScrollListener {
 
 		@Override
 		public void onScroll(AbsListView view, int firstVisibleItem,
@@ -241,16 +242,26 @@ public class AlbumFragment extends ListFragment {
 			artistName =  (TextView) rowView.findViewById(R.id.artistName);
 
 			albumName.setText(items.get(position).getAlbumName());
-			artistName.setText(items.get(position).getArtistName());
+			
+			//search artists for artist name associated with album
+			for(Artist a: MessageHandler.getArtists()) {
+				if(a.getArtistId().equalsIgnoreCase(items.get(position).getArtistId())) {
+					artistName.setText(a.getArtistName());
+					break;
+				}
+			}
 
 			return rowView;
 		}
 
 	}
 	
+	/**
+	 * Method that listens for clicks on an item in the listview. 
+	 */
 	@Override
 	public void onListItemClick (ListView l, View v, int position, long id){	
-		//get ids of songs in album
+		//get ids of songs in album and save
 		Set<String> set = new HashSet<String>();
 		set.addAll(((Album) l.getItemAtPosition(position)).getSongs());
 		SharedPreferences settings = this.getActivity().getSharedPreferences("songsInAlbum", Context.MODE_PRIVATE);
@@ -258,8 +269,24 @@ public class AlbumFragment extends ListFragment {
 		editor.putStringSet("songsInAlbum", set);
 		editor.commit();
 		
-		System.out.println(((Album) l.getItemAtPosition(position)).getSongs());
+		//save album name to be used in song activity
+		settings = this.getActivity().getSharedPreferences("albumName", Context.MODE_PRIVATE);
+		editor = settings.edit();
+		editor.putString("albumName", (((Album)l.getItemAtPosition(position)).getAlbumName()).trim());
+		editor.commit();
 		
+		//save artist name to be used in song activity
+		settings = this.getActivity().getSharedPreferences("artistName", Context.MODE_PRIVATE);
+		editor = settings.edit();
+		for(Artist a: MessageHandler.getArtists()) {
+			if(a.getArtistId().equalsIgnoreCase((((Album)l.getItemAtPosition(position)).getArtistId()).trim())) {
+				editor.putString("artistName", a.getArtistName());
+				break;
+			}
+		}
+		editor.commit();
+		
+		//start activity to display songs within album
 		Intent intent = new Intent(this.getActivity().getApplicationContext(), SongActivity.class);
     	startActivity(intent);
 	}

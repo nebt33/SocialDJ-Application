@@ -41,8 +41,12 @@ public class SongActivity extends Activity {
 					songs.add(s);
 			}
 		}
-		for(Song s: songs)
-		System.out.println(s.getSongId());
+		
+		//header for song activity(album & artist)
+		settings = getSharedPreferences("albumName", MODE_PRIVATE);
+		((TextView)findViewById (R.id.albumName)).setText (settings.getString("albumName", ""));
+		settings = getSharedPreferences("artistName", MODE_PRIVATE);
+		((TextView)findViewById (R.id.artistName)).setText (settings.getString("artistName", ""));
 
 		//Populate list
 		adapter = new CustomSongAdapter(this, R.layout.songs_list, songs);
