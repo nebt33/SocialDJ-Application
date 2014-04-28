@@ -142,19 +142,16 @@ public class SongFragment extends ListFragment {
 				PrintWriter out = null;
 				try {
 					out = new PrintWriter(ConnectedSocket.getSocket().getOutputStream());
+					out.write("list_songs|" + params[0] + "|" + params[1] + "\n");
+					out.flush();
 				} catch (IOException e) {e.printStackTrace();}
-				out.write("list_songs|" + params[0] + "|" + params[1] + "\n");
-				out.flush();
 				try {
-					System.out.println(MessageHandler.getSongs().size());
-					System.out.println(params[1]);
 					int start = MessageHandler.getSongs().size();
 					int end = start + params[1];
 					while(start < end) {
 						start = MessageHandler.getSongs().size();
 						Thread.sleep(10);
 					}
-					System.out.println(MessageHandler.getSongs().size());
 				} catch (InterruptedException e) {e.printStackTrace();}
 			}
 			
@@ -162,8 +159,6 @@ public class SongFragment extends ListFragment {
 				for(int i = params[0]; i < ((params[0] + params[1])); i++) 
 					results.add(MessageHandler.getSongs().get(i));
 			}
-			//return MessageHandler.getSongs();
-			System.out.println("results.size(): " + results.size());
 			return results;
 		}
 
@@ -176,7 +171,6 @@ public class SongFragment extends ListFragment {
 					  adapter.add(item);
 				}
 			}
-			System.out.println("adapter count: " + adapter.getCount());
 
 			//loading is done
 			isLoading = false;

@@ -145,24 +145,20 @@ public class AlbumFragment extends ListFragment {
 				listTopPosition = params[TOP_ITEM_INDEX];
 
 			//excute network call
-			System.out.println("line 143: " + MessageHandler.getAlbums().size());
 			if(MessageHandler.getAlbums().size() < params[0] + params[1]) {
 				PrintWriter out = null;
 				try {
 					out = new PrintWriter(ConnectedSocket.getSocket().getOutputStream());
+					out.write("list_albums|" + params[0] + "|" + params[1] + "\n");
+					out.flush();
 				} catch (IOException e) {e.printStackTrace();}
-				out.write("list_albums|" + params[0] + "|" + params[1] + "\n");
-				out.flush();
 				try {
-					System.out.println(MessageHandler.getAlbums().size());
-					System.out.println(params[1]);
 					int start = MessageHandler.getAlbums().size();
 					int end = start + params[1];
 					while(start < end) {
 						start = MessageHandler.getAlbums().size();
 						Thread.sleep(10);
 					}
-					System.out.println(MessageHandler.getAlbums().size());
 				} catch (InterruptedException e) {e.printStackTrace();}
 			}
 			
@@ -170,8 +166,6 @@ public class AlbumFragment extends ListFragment {
 				for(int i = params[0]; i < ((params[0] + params[1])); i++) 
 					results.add(MessageHandler.getAlbums().get(i));
 			}
-			//return MessageHandler.getSongs();
-			System.out.println("results.size(): " + results.size());
 			return results;
 		}
 
@@ -184,7 +178,6 @@ public class AlbumFragment extends ListFragment {
 					  adapter.add(item);
 				}
 			}
-			System.out.println("adapter count: " + adapter.getCount());
 
 			//loading is done
 			isLoading = false;

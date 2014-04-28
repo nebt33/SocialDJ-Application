@@ -164,9 +164,9 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 				PrintWriter out = null;
 				try {
 					out = new PrintWriter(ConnectedSocket.getSocket().getOutputStream());
+					out.write("list_artists|" + params[0] + "|" + params[1] + "\n");
+					out.flush();
 				} catch (IOException e) {e.printStackTrace();}
-				out.write("list_artists|" + params[0] + "|" + params[1] + "\n");
-				out.flush();
 				try {
 					int start = MessageHandler.getArtists().size();
 					int end = start + params[1];
@@ -176,7 +176,7 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 					}
 				} catch (InterruptedException e) {e.printStackTrace();}
 			}
-			
+
 			synchronized(MessageHandler.getArtists()) {
 				for(int i = params[0]; i < ((params[0] + params[1])); i++) 
 					results.add(MessageHandler.getArtists().get(i));
@@ -231,9 +231,11 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 		public void add(Artist artist) {
 			listArtists.add(artist);
 			//find albums with artist
-			for(Album a: MessageHandler.getAlbums()) {
-				if(artist.getArtistId().equalsIgnoreCase(a.getArtistId()))
-					listAlbums.add(a);
+			synchronized(MessageHandler.getAlbums()) {
+				for(Album a: MessageHandler.getAlbums()) {
+					if(artist.getArtistId().equalsIgnoreCase(a.getArtistId()))
+						listAlbums.add(a);
+				}
 			}
 		}
 

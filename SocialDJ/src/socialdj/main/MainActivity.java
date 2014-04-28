@@ -67,6 +67,8 @@ public class MainActivity extends FragmentActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         
+        Toast.makeText(getApplicationContext(), "Searching for servers....Please wait....", Toast.LENGTH_LONG).show();
+        
         //connect to saved server on startup
         ConnectTask connect = new ConnectTask();
 		SharedPreferences settings = getSharedPreferences("connected", MODE_PRIVATE);
@@ -262,11 +264,9 @@ public class MainActivity extends FragmentActivity {
 		@Override
 		protected String doInBackground(String... params) {
 			//tries to connect to server associated with radio button
-			//Socket socket = null;
 			ConnectedSocket socket = new ConnectedSocket();
 			if(!(params[0].equals(nonActiveIp))){
 				try {
-					System.out.println("Saved server :" + params[0]);
 					socket.connect(new InetSocketAddress(params[0].trim(), standardPort), 2000);
 				} catch (Exception e) {
 					Log.v("ConvertView", String.valueOf("No server by that ip can be connected to at start of application"));

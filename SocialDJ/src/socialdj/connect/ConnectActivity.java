@@ -175,8 +175,6 @@ public class ConnectActivity extends Activity {
 			@Override public String call() {
 				try {
 					//to not close socket of current connected
-					System.out.println(ConnectedSocket.getConnectedIP());
-					System.out.println(ip);
 					if(ip.equalsIgnoreCase(ConnectedSocket.getConnectedIP()))
 						return ip;
 					else {
