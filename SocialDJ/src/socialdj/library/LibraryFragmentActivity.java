@@ -10,6 +10,8 @@ import android.annotation.TargetApi;
 import android.app.ActionBar;
 import android.support.v4.app.Fragment;
 import android.app.FragmentTransaction;
+import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
@@ -74,6 +76,16 @@ ActionBar.TabListener {
 					.setTabListener(this));
 		}
 	}
+	
+	/**
+     * Force portrait view
+     */
+    @Override
+    public void onConfigurationChanged(Configuration newConfig)
+    {
+        super.onConfigurationChanged(newConfig);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+    }
 	
 	/**
 	 * Set up the android.app.ActionBar, if the API is available.

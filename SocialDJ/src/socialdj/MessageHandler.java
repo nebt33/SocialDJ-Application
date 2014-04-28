@@ -82,7 +82,7 @@ public class MessageHandler implements Runnable {
 						newAlbum(inputLine);
 						break;
 					case "album_info":
-						AlbumInfo(inputLine);
+						albumInfo(inputLine);
 						break;
 					case "forget_album":
 						forgetAlbum(inputLine);
@@ -211,17 +211,18 @@ public class MessageHandler implements Runnable {
 	 * Updates album info with songs' id
 	 * @param inputLine
 	 */
-	public void AlbumInfo(String inputLine) {
+	public void albumInfo(String inputLine) {
 		//split inputLine up
 		List<String> temp = Arrays.asList(inputLine.split("\\|"));
 		String id = temp.get(1);
-		String albumName= temp.get(2);
-		String metaItem = "";
+		String albumName = temp.get(2);
+		String artistId = temp.get(3);
 		//search list for album to enter into correct spot
 		synchronized (albums) {
 			for(Album album: albums) {
 				if(album.getAlbumId().equalsIgnoreCase(id)){
 					album.setAlbumName(albumName);
+					album.setArtistId(artistId);
 					for(int i = 3; i < temp.size(); i++) {
 						album.addSong(temp.get(i));
 					}

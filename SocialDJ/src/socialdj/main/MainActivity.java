@@ -15,6 +15,7 @@ import android.app.Fragment;
 import android.app.FragmentManager;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.content.res.TypedArray;
 import android.os.AsyncTask;
@@ -132,6 +133,16 @@ public class MainActivity extends FragmentActivity {
             displayView(0);
         }
     }
+    
+    /**
+     * Force portrait view
+     */
+    @Override
+    public void onConfigurationChanged(Configuration newConfig)
+    {
+        super.onConfigurationChanged(newConfig);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+    }
  
     /**
      * Slide menu item click listener
@@ -232,12 +243,12 @@ public class MainActivity extends FragmentActivity {
         mDrawerToggle.syncState();
     }
  
-    @Override
+    /*@Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
         // Pass any configuration change to the drawer toggls
         mDrawerToggle.onConfigurationChanged(newConfig);
-    }
+    }*/
     
     /**
 	 * Used to connect to previous server remembered by application if possible on create

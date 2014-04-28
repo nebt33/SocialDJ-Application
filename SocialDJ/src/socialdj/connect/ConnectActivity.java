@@ -27,6 +27,8 @@ import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 import android.text.format.Formatter;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -74,6 +76,16 @@ public class ConnectActivity extends Activity {
 		
 		setupActionBar();
 	}
+	
+	/**
+     * Force portrait view
+     */
+    @Override
+    public void onConfigurationChanged(Configuration newConfig)
+    {
+        super.onConfigurationChanged(newConfig);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+    }
 	
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {

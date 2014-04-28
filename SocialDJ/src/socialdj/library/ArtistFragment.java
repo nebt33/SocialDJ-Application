@@ -3,10 +3,8 @@ package socialdj.library;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
 
 import socialdj.Album;
@@ -14,7 +12,6 @@ import socialdj.Artist;
 import socialdj.ConnectedSocket;
 import socialdj.MessageHandler;
 import socialdj.config.R;
-import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -27,10 +24,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AbsListView;
 import android.widget.AbsListView.OnScrollListener;
-import android.widget.ArrayAdapter;
 import android.widget.BaseExpandableListAdapter;
 import android.widget.ExpandableListView;
-import android.widget.ListView;
+import android.widget.ExpandableListView.OnChildClickListener;
 import android.widget.TextView;
 
 /**
@@ -38,7 +34,7 @@ import android.widget.TextView;
  * @author Nathan
  *
  */
-public class ArtistFragment extends Fragment {
+public class ArtistFragment extends Fragment implements OnChildClickListener {
 
 	//private CustomAlbumAdapter adapter = null;
 	private CustomExpandableArtistListAdapter adapter = null;
@@ -52,67 +48,161 @@ public class ArtistFragment extends Fragment {
 	private static final int LOAD_AHEAD_SIZE = 50;
 	private static final int INCREMENT_TOTAL_MINIMUM_SIZE = 100;
 	private static final String PROP_TOP_ITEM = "top_list_item";
-
-
-	/*@Override
-	public void onActivityCreated(Bundle savedInstanceState) {
-		super.onActivityCreated(savedInstanceState);
-
-		//Populate list
-		adapter = new CustomAlbumAdapter(getActivity(), R.layout.albums_list, new ArrayList<Album>());
-
-		//asynchronously initial list
-		GetSongTask task = new GetSongTask();
-
-		setListAdapter(adapter);
-		getListView().setOnScrollListener(new SongListScrollListener());
-
-		if(savedInstanceState != null) {
-			//Restore last state from top list position
-			int listTopPosition = savedInstanceState.getInt(PROP_TOP_ITEM, 0);
-
-			//load elements to get to the top of the list
-			task = new GetSongTask();
-			if(listTopPosition > BLOCK_SIZE) {
-				//download asynchronously inital list
-				task.execute(new Integer[] {BLOCK_SIZE, listTopPosition + BLOCK_SIZE, listTopPosition});
-			}
-		}
-	}*/
+	private ExpandableListView elv = null;
 	
 	@Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.artist_main, null);
-        ExpandableListView elv = (ExpandableListView) v.findViewById(R.id.lvExp);
+        elv = (ExpandableListView) v.findViewById(R.id.lvExp);
+
+		//adapter = new CustomExpandableArtistListAdapter(getActivity(), MessageHandler.getArtists(), MessageHandler.getAlbums());
+		adapter = new CustomExpandableArtistListAdapter(getActivity(), new ArrayList<Artist>(), new ArrayList<Album>());
+
+		elv.setAdapter(adapter);
+
+        elv.setOnScrollListener(new ArtistListScrollListener());
         
-        //test dummy data
-        ArrayList<Artist> listArtists = new ArrayList<Artist>();
-        ArrayList<Album> listAlbums = new ArrayList<Album>();
-        for(int i = 0; i < 10; i++) {
-			String word = "";
-			Random randomGenerator = new Random();
-			for(int j = 0; j < 30; j++) {
-				int randomInt = randomGenerator.nextInt(26) + 1;
-				word += getCharForNumber(randomInt);
-			}
-			Artist artist = new Artist(Integer.toString(i));
-			artist.setArtistName(word);
-			
-			Album album = new Album(Integer.toString(1));
-			album.setAlbumName(word);
-			
-			listArtists.add(artist);
-			listAlbums.add(album);
-		}
-        
-        adapter = new CustomExpandableArtistListAdapter(getActivity(), listArtists, new ArrayList<Album>());
-        //adapter = new CustomExpandableArtistListAdapter(getActivity(), new ArrayList<Artist>(), new ArrayList<Album>());
-        elv.setAdapter(adapter);
+        elv.setOnChildClickListener(this);
         return v;
     }
 	
-	private static String getCharForNumber(int i) {
-		return i > 0 && i < 27 ? String.valueOf((char)(i + 64)) : null;
+	/**
+	 * Listener which handles the endless list.  It is responsible for
+	 * determining when the network calls will be asynchronously.
+	 */
+	class ArtistListScrollListener implements OnScrollListener {
+
+		@Override
+		public void onScroll(AbsListView view, int firstVisibleItem,
+				int visibleItemCount, int totalItemCount) {
+			//load more elements if there is LOAD_AHEAD_SIZE left in the list being displayed
+			boolean loadMore = firstVisibleItem + visibleItemCount >= totalItemCount - LOAD_AHEAD_SIZE;
+
+			/*
+			 * Only get more results if the list achieves a min size. This is to avoid
+			 * that this method is called each time the loadMore is reached and scroll
+			 * pressed
+			 */
+			if(loadMore && totalSizeToBe <= totalItemCount) {
+				totalSizeToBe += INCREMENT_TOTAL_MINIMUM_SIZE;
+				//calls more elements
+				GetArtistTask task = new GetArtistTask();
+				task.execute(new Integer[] {totalItemCount, BLOCK_SIZE});
+			}
+		}
+
+		@Override
+		public void onScrollStateChanged(AbsListView view, int scrollState){
+
+		}
+	}
+	
+	//child listener
+	public boolean onChildClick(ExpandableListView elv, View v,
+			int groupPosition, int childPosition, long id) {
+		//System.out.println("INSIDE ON CHILD CLICK: " + (((Album)elv.getItemAtPosition(childPosition)).getAlbumName()).trim());
+		
+		//get ids of songs in album and save
+		Set<String> set = new HashSet<String>();
+		System.out.println(((Album) adapter.getChild(groupPosition, childPosition)).getSongs());
+		//set.addAll(((Album) elv.getItemAtPosition(childPosition)).getSongs());
+		set.addAll(((Album) adapter.getChild(groupPosition, childPosition)).getSongs());
+		SharedPreferences settings = getActivity().getSharedPreferences("songsInAlbum", Context.MODE_PRIVATE);
+		SharedPreferences.Editor editor = settings.edit();
+		editor.putStringSet("songsInAlbum", set);
+		editor.commit();
+
+		//save album name to be used in song activity
+		settings = getActivity().getSharedPreferences("albumName", Context.MODE_PRIVATE);
+		editor = settings.edit();
+		//editor.putString("albumName", (((Album)elv.getItemAtPosition(childPosition)).getAlbumName()).trim());
+		editor.putString("albumName", ((Album) adapter.getChild(groupPosition, childPosition)).getAlbumName());
+		editor.commit();
+
+		//save artist name to be used in song activity
+		settings = getActivity().getSharedPreferences("artistName", Context.MODE_PRIVATE);
+		editor = settings.edit();
+		for(Artist a: MessageHandler.getArtists()) {
+			if(a.getArtistId().equalsIgnoreCase(((Album) adapter.getChild(groupPosition, childPosition)).getArtistId())) {
+				editor.putString("artistName", a.getArtistName());
+				break;
+			}
+		}
+		editor.commit();
+
+		//start activity to display songs within album
+		Intent intent = new Intent(getActivity().getApplicationContext(), SongActivity.class);
+		startActivity(intent);
+
+		return false;
+	}
+	
+	/**
+	 * Asynchronous call.  This class is responsible for calling the network for more artists
+	 * and managing the isLoading boolean.
+	 */
+	class GetArtistTask extends AsyncTask<Integer, Void, List<Artist>> {
+		private static final int TOP_ITEM_INDEX = 2;
+
+		//position to scroll list to
+		private int listTopPosition = 0;
+
+		@Override 
+		public void onPreExecute() {
+			isLoading = true;
+		}
+
+		@Override
+		protected List<Artist> doInBackground(Integer... params) {
+			List<Artist> results = new ArrayList<Artist>();
+
+			if(params.length > TOP_ITEM_INDEX)
+				listTopPosition = params[TOP_ITEM_INDEX];
+
+			//excute network call
+			if(MessageHandler.getArtists().size() < params[0] + params[1]) {
+				PrintWriter out = null;
+				try {
+					out = new PrintWriter(ConnectedSocket.getSocket().getOutputStream());
+				} catch (IOException e) {e.printStackTrace();}
+				out.write("list_artists|" + params[0] + "|" + params[1] + "\n");
+				out.flush();
+				try {
+					int start = MessageHandler.getArtists().size();
+					int end = start + params[1];
+					while(start < end) {
+						start = MessageHandler.getArtists().size();
+						Thread.sleep(10);
+					}
+				} catch (InterruptedException e) {e.printStackTrace();}
+			}
+			
+			synchronized(MessageHandler.getArtists()) {
+				for(int i = params[0]; i < ((params[0] + params[1])); i++) 
+					results.add(MessageHandler.getArtists().get(i));
+			}
+			return results;
+		}
+
+		@Override
+		protected void onPostExecute(List<Artist> result) {
+			for(Artist item: result) {
+				synchronized(adapter) {
+					//if(!adapter.contains(item))
+					  adapter.add(item);
+					  adapter.notifyDataSetChanged();
+				}
+			}
+			//System.out.println("adapter count: " + adapter.getCount());
+
+			//loading is done
+			isLoading = false;
+
+			//update top list item
+			if(listTopPosition > 0) {
+				elv.setSelection(listTopPosition);
+			}
+		}
 	}
 
 	/*@Override
@@ -127,22 +217,31 @@ public class ArtistFragment extends Fragment {
 	public class CustomExpandableArtistListAdapter extends BaseExpandableListAdapter {
 
 		private Context _context;
-		private ArrayList<Artist> listArtists; // header titles
+		private List<Artist> listArtists; // header titles
 		// child data in format of header title, child title
-		private ArrayList<Album> listAlbums;
+		private List<Album> listAlbums;
 
-		public CustomExpandableArtistListAdapter(Context context, ArrayList<Artist> listArtists,
-				ArrayList<Album> listAlbums) {
+		public CustomExpandableArtistListAdapter(Context context, List<Artist> listArtists,
+				List<Album> listAlbums) {
 			this._context = context;
 			this.listArtists = listArtists;
 			this.listAlbums = listAlbums;
+		}
+		
+		public void add(Artist artist) {
+			listArtists.add(artist);
+			//find albums with artist
+			for(Album a: MessageHandler.getAlbums()) {
+				if(artist.getArtistId().equalsIgnoreCase(a.getArtistId()))
+					listAlbums.add(a);
+			}
 		}
 
 		@Override
 		public Object getChild(int groupPosition, int childPosititon) {
 			for(Album a: MessageHandler.getAlbums()) {
 				if(listArtists.get(groupPosition).getArtistId().equalsIgnoreCase(a.getArtistId())) {
-					return a.getAlbumName();
+					return a;
 				}
 			}
 			//if not found
@@ -158,7 +257,7 @@ public class ArtistFragment extends Fragment {
 		public View getChildView(int groupPosition, final int childPosition,
 				boolean isLastChild, View convertView, ViewGroup parent) {
 
-			final String childText = (String) getChild(groupPosition, childPosition);
+			final String childText = (String)((Album)getChild(groupPosition, childPosition)).getAlbumName();
 
 			if (convertView == null) {
 				LayoutInflater infalInflater = (LayoutInflater) this._context
@@ -166,10 +265,10 @@ public class ArtistFragment extends Fragment {
 				convertView = infalInflater.inflate(R.layout.artist_list, null);
 			}
 
-			TextView txtListChild = (TextView) convertView
+			TextView albumName = (TextView) convertView
 					.findViewById(R.id.artistName);
 
-			txtListChild.setText(childText);
+			albumName.setText(childText);
 			return convertView;
 		}
 
@@ -208,10 +307,10 @@ public class ArtistFragment extends Fragment {
 				convertView = infalInflater.inflate(R.layout.artist_list, null);
 			}
 
-			TextView lblListHeader = (TextView) convertView
+			TextView artistName = (TextView) convertView
 					.findViewById(R.id.artistName);
-			lblListHeader.setTypeface(null, Typeface.BOLD);
-			lblListHeader.setText(headerTitle);
+			artistName.setTypeface(null, Typeface.BOLD);
+			artistName.setText(headerTitle);
 
 			return convertView;
 		}
@@ -226,39 +325,4 @@ public class ArtistFragment extends Fragment {
 			return true;
 		}
 	}
-
-	/**
-	 * Method that listens for clicks on an item in the listview. 
-	 */
-	/*@Override
-	public void onListItemClick (ListView l, View v, int position, long id){	
-		//get ids of songs in album and save
-		Set<String> set = new HashSet<String>();
-		set.addAll(((Album) l.getItemAtPosition(position)).getSongs());
-		SharedPreferences settings = this.getActivity().getSharedPreferences("songsInAlbum", Context.MODE_PRIVATE);
-		SharedPreferences.Editor editor = settings.edit();
-		editor.putStringSet("songsInAlbum", set);
-		editor.commit();
-		
-		//save album name to be used in song activity
-		settings = this.getActivity().getSharedPreferences("albumName", Context.MODE_PRIVATE);
-		editor = settings.edit();
-		editor.putString("albumName", (((Album)l.getItemAtPosition(position)).getAlbumName()).trim());
-		editor.commit();
-		
-		//save artist name to be used in song activity
-		settings = this.getActivity().getSharedPreferences("artistName", Context.MODE_PRIVATE);
-		editor = settings.edit();
-		for(Artist a: MessageHandler.getArtists()) {
-			if(a.getArtistId().equalsIgnoreCase((((Album)l.getItemAtPosition(position)).getArtistId()).trim())) {
-				editor.putString("artistName", a.getArtistName());
-				break;
-			}
-		}
-		editor.commit();
-		
-		//start activity to display songs within album
-		Intent intent = new Intent(this.getActivity().getApplicationContext(), SongActivity.class);
-    	startActivity(intent);
-	}*/
 }
