@@ -11,7 +11,7 @@ import java.util.List;
 
 public class MessageHandler implements Runnable {
 
-    boolean serverExist = false;
+    static boolean serverExist = false;
 	String currentServer = null;
 	String nonActiveIP = "0.0.0.0";
 	

@@ -271,8 +271,8 @@ public class ConnectActivity extends Activity {
 			holder.radio.setChecked(ip.isSelected());
 			
 			//checks the current server connected to when reopening the connect screen
-			if(!(settings.getString("currentlyConnected", nonActiveIp).equals(nonActiveIp))) {
-				if(holder.textViewIP.getText().toString().trim().equals(settings.getString("currentlyConnected", nonActiveIp))) {
+			if(ConnectedSocket.getSocket() != null) {
+				if(holder.textViewIP.getText().toString().trim().equals(ConnectedSocket.getConnectedIP().trim())){
 					try {
 						holder.radio.setChecked(true);
 						currentlyClicked = holder.radio;
@@ -347,7 +347,7 @@ public class ConnectActivity extends Activity {
 					Toast.makeText(getApplicationContext(), "Connected to Server: " + currentIpAddress, Toast.LENGTH_SHORT).show();
 					//call new handler for new server
 					//change in ip
-					if(!currentIpAddress.equalsIgnoreCase(previousIpAddress) && (!previousIpAddress.equalsIgnoreCase(nonActiveIp))) {
+					if(!currentIpAddress.equalsIgnoreCase(previousIpAddress)) {
 						MessageHandler task = new MessageHandler();
 						new Thread(task).start();
 					}
