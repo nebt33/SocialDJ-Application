@@ -177,7 +177,8 @@ public class MessageHandler implements Runnable {
 					break;
 				}
 			}
-			Collections.sort(artists);
+			if(artists != null)
+			  Collections.sort(artists);
 		}
 	}
 	
@@ -229,7 +230,8 @@ public class MessageHandler implements Runnable {
 					break;
 				}
 			}
-			Collections.sort(albums);
+			if(albums != null)
+			  Collections.sort(albums);
 		}
 	}
 	
@@ -436,7 +438,8 @@ public class MessageHandler implements Runnable {
 				}
 			}
 			//sort songs alphbetically
-			Collections.sort(songs);
+			if(songs != null)
+			  Collections.sort(songs);
 		}
 	}
 }

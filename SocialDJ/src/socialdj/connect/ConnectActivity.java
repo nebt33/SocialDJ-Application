@@ -94,6 +94,12 @@ public class ConnectActivity extends Activity {
 		case android.R.id.home:
 			this.finish();
 			return true;
+		//refresh button
+		case R.id.action_refresh:
+			 Toast.makeText(getApplicationContext(), "Searching for servers....Please wait....", Toast.LENGTH_LONG).show();
+			 finish();
+			 startActivity(getIntent());
+			 return true;
 		}
 		return super.onOptionsItemSelected(item);
 	}
