@@ -5,14 +5,18 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
+import socialdj.Album;
 import socialdj.ConnectedSocket;
 import socialdj.MessageHandler;
 import socialdj.SendMessage;
 import socialdj.Song;
 import socialdj.config.R;
+import socialdj.library.AlbumFragment.AlbumListScrollListener;
 import android.app.Activity;
+import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v4.app.ListFragment;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -22,6 +26,7 @@ import android.widget.AbsListView;
 import android.widget.AbsListView.OnScrollListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.ListView;
 import android.widget.TextView;
 
 /**
@@ -43,6 +48,11 @@ public class SongFragment extends ListFragment {
 	private static final int INCREMENT_TOTAL_MINIMUM_SIZE = 100;
 	private static final String PROP_TOP_ITEM = "top_list_item";
 
+	//Create handler in the thread it should be associated with 
+	//in this case the UI thread
+	final Handler handler = new Handler();
+	ViewHandler viewHandler = new ViewHandler();
+
 
 	@Override
 	public void onActivityCreated(Bundle savedInstanceState) {
@@ -50,13 +60,16 @@ public class SongFragment extends ListFragment {
 
 		//Populate list
 		adapter = new CustomSongAdapter(getActivity(), R.layout.songs_list, new ArrayList<Song>());
+	    
+	    setListAdapter(adapter);
 
 		//asynchronously initial list
 		GetSongTask task = new GetSongTask();
 		//task.execute(new Integer[] {0, BLOCK_SIZE});
 
 		setListAdapter(adapter);
-		getListView().setOnScrollListener(new SongListScrollListener());
+		
+		new Thread(viewHandler).start();
 
 		if(savedInstanceState != null) {
 			//Restore last state from top list position
@@ -70,6 +83,11 @@ public class SongFragment extends ListFragment {
 			}
 		}
 	}
+	
+	@Override 		
+	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {			 			
+		return inflater.inflate(R.layout.footer, container, false); 		
+    }
 
 	/*@Override
 	public void onSaveInstanceState(Bundle state) {
@@ -79,6 +97,16 @@ public class SongFragment extends ListFragment {
 			state.putInt(PROP_TOP_ITEM, listPosition);
 		}
 	}*/
+	
+	/**
+	 * Use to clear thread.  This will ensure getListview will be created everytime and get rid of the
+	 * content view not yet being created.
+	 */
+	@Override
+	public void onDestroyView() {
+		super.onDestroyView();
+		viewHandler.kill();
+	}
 
 	/**
 	 * Listener which handles the endless list.  It is responsible for
@@ -113,6 +141,41 @@ public class SongFragment extends ListFragment {
 
 		}
 	}
+	
+	public class ViewHandler implements Runnable {
+		boolean running = true;
+		public void run() {
+			while(running){
+				//Do time consuming listener call
+				getListView().setOnScrollListener(new SongListScrollListener());
+
+				//The handler schedules the new runnable on the UI thread
+				handler.post(new Runnable() {
+					@Override
+					public void run() {
+						synchronized(MessageHandler.getSongs()) {
+							for(Song item: MessageHandler.getSongs()) {
+								synchronized(adapter) {
+									if(!adapter.contains(item)) {
+										adapter.add(item);
+										adapter.notifyDataSetChanged();
+									}
+								}
+							}
+						}
+					}
+				});
+				//Add some downtime
+				try {
+					Thread.sleep(100);
+				}catch (InterruptedException e) {e.printStackTrace();}
+			}
+		}
+
+		public void kill() {
+			running = false;
+		}
+	}
 
 	/**
 	 * Asynchronous call.  This class is responsible for calling the network for more songs
@@ -145,32 +208,33 @@ public class SongFragment extends ListFragment {
 					out.write("list_songs|" + params[0] + "|" + params[1] + "\n");
 					out.flush();
 				} catch (IOException e) {e.printStackTrace();}
-				try {
+				/*try {
 					int start = MessageHandler.getSongs().size();
 					int end = start + params[1];
 					while(start < end) {
 						start = MessageHandler.getSongs().size();
 						Thread.sleep(10);
 					}
-				} catch (InterruptedException e) {e.printStackTrace();}
+				} catch (InterruptedException e) {e.printStackTrace();}*/
 			}
 			
-			synchronized(MessageHandler.getSongs()) {
+			/*synchronized(MessageHandler.getSongs()) {
 				for(int i = params[0]; i < ((params[0] + params[1])); i++) 
 					results.add(MessageHandler.getSongs().get(i));
 			}
-			return results;
+			return results;*/
+			return MessageHandler.getSongs();
 		}
 
 		@Override
 		protected void onPostExecute(List<Song> result) {
-			adapter.setNotifyOnChange(true);
+			/*adapter.setNotifyOnChange(true);
 			for(Song item: result) {
 				synchronized(adapter) {
 					//if(!adapter.contains(item))
 					  adapter.add(item);
 				}
-			}
+			}*/
 
 			//loading is done
 			isLoading = false;
@@ -230,6 +294,10 @@ public class SongFragment extends ListFragment {
 			artistName =  (TextView) rowView.findViewById(R.id.artistName);
 			songDuration = (TextView) rowView.findViewById(R.id.songDuration);
 			addQButton = (Button) rowView.findViewById(R.id.AddQButton);
+			
+			//--------------------test---------------------------------
+			TextView id = (TextView) rowView.findViewById(R.id.id);
+			id.setText(Integer.toString(position));
 
 			songTitle.setText(items.get(position).getSongTitle());
 			artistName.setText(items.get(position).getArtistName());

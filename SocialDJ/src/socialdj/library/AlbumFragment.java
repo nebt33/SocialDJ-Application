@@ -14,9 +14,11 @@ import socialdj.MessageHandler;
 import socialdj.SendMessage;
 import socialdj.Song;
 import socialdj.config.R;
+import socialdj.library.ArtistFragment.ArtistListScrollListener;
 import socialdj.library.SongFragment.CustomSongAdapter;
 import socialdj.library.SongFragment.GetSongTask;
 import socialdj.library.SongFragment.SongListScrollListener;
+import socialdj.library.SongFragment.ViewHandler;
 
 import android.app.Activity;
 import android.content.Context;
@@ -24,6 +26,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v4.app.ListFragment;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -54,6 +57,11 @@ public class AlbumFragment extends ListFragment {
 	private static final int LOAD_AHEAD_SIZE = 50;
 	private static final int INCREMENT_TOTAL_MINIMUM_SIZE = 100;
 	private static final String PROP_TOP_ITEM = "top_list_item";
+	
+	//Create handler in the thread it should be associated with 
+	//in this case the UI thread
+	final Handler handler = new Handler();
+	ViewHandler viewHandler = new ViewHandler();
 
 
 	@Override
@@ -67,7 +75,8 @@ public class AlbumFragment extends ListFragment {
 		GetSongTask task = new GetSongTask();
 
 		setListAdapter(adapter);
-		getListView().setOnScrollListener(new AlbumListScrollListener());
+		
+		new Thread(viewHandler).start();
 
 		if(savedInstanceState != null) {
 			//Restore last state from top list position
@@ -81,6 +90,41 @@ public class AlbumFragment extends ListFragment {
 			}
 		}
 	}
+	
+	public class ViewHandler implements Runnable {
+		boolean running = true;
+		public void run() {
+			while(running){
+				//Do time consuming listener call
+				getListView().setOnScrollListener(new AlbumListScrollListener());
+
+				//The handler schedules the new runnable on the UI thread
+				handler.post(new Runnable() {
+					@Override
+					public void run() {
+						synchronized(MessageHandler.getAlbums()) {
+							for(Album item: MessageHandler.getAlbums()) {
+								synchronized(adapter) {
+									if(!adapter.contains(item)) {
+										adapter.add(item);
+										adapter.notifyDataSetChanged();
+									}
+								}
+							}
+						}
+					}
+				});
+				//Add some downtime
+				try {
+					Thread.sleep(100);
+				}catch (InterruptedException e) {e.printStackTrace();}
+			}
+		}
+
+		public void kill() {
+			running = false;
+		}
+	}
 
 	/*@Override
 	public void onSaveInstanceState(Bundle state) {
@@ -90,6 +134,16 @@ public class AlbumFragment extends ListFragment {
 			state.putInt(PROP_TOP_ITEM, listPosition);
 		}
 	}*/
+	
+	/**
+	 * Use to clear thread.  This will ensure getListview will be created everytime and get rid of the
+	 * content view not yet being created.
+	 */
+	@Override
+	public void onDestroyView() {
+		super.onDestroyView();
+		viewHandler.kill();
+	}
 
 	/**
 	 * Listener which handles the endless list.  It is responsible for
@@ -152,32 +206,33 @@ public class AlbumFragment extends ListFragment {
 					out.write("list_albums|" + params[0] + "|" + params[1] + "\n");
 					out.flush();
 				} catch (IOException e) {e.printStackTrace();}
-				try {
+				/*try {
 					int start = MessageHandler.getAlbums().size();
 					int end = start + params[1];
 					while(start < end) {
 						start = MessageHandler.getAlbums().size();
 						Thread.sleep(10);
 					}
-				} catch (InterruptedException e) {e.printStackTrace();}
+				} catch (InterruptedException e) {e.printStackTrace();}*/
 			}
 			
-			synchronized(MessageHandler.getAlbums()) {
+			/*synchronized(MessageHandler.getAlbums()) {
 				for(int i = params[0]; i < ((params[0] + params[1])); i++) 
 					results.add(MessageHandler.getAlbums().get(i));
 			}
-			return results;
+			return results;*/
+			return MessageHandler.getAlbums();
 		}
 
 		@Override
 		protected void onPostExecute(List<Album> result) {
-			adapter.setNotifyOnChange(true);
+			/*adapter.setNotifyOnChange(true);
 			for(Album item: result) {
 				synchronized(adapter) {
 					//if(!adapter.contains(item))
 					  adapter.add(item);
 				}
-			}
+			}*/
 
 			//loading is done
 			isLoading = false;
@@ -237,12 +292,19 @@ public class AlbumFragment extends ListFragment {
 			albumName.setText(items.get(position).getAlbumName());
 			
 			//search artists for artist name associated with album
-			for(Artist a: MessageHandler.getArtists()) {
-				if(a.getArtistId().equalsIgnoreCase(items.get(position).getArtistId())) {
-					artistName.setText(a.getArtistName());
-					break;
+			synchronized(MessageHandler.getArtists()) {
+				for(Artist a: MessageHandler.getArtists()) {
+					if(a.getArtistId().equalsIgnoreCase(items.get(position).getArtistId())) {
+						artistName.setText(a.getArtistName());
+						break;
+					}
 				}
 			}
+			
+			//TEST--------------------------
+			TextView id;
+			id = (TextView) rowView.findViewById(R.id.id);
+			id.setText(Integer.toString(position));
 
 			return rowView;
 		}

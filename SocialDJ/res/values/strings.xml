@@ -39,5 +39,6 @@
     <string name="hello_world">Hello world!</string>
     <string name="albumName">albumName</string>
     <string name="artistName">artistName</string>
+    <string name="search_song">Enter a Song Name</string>
 
 </resources>

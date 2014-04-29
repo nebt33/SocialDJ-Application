@@ -11,6 +11,7 @@ import socialdj.Album;
 import socialdj.Artist;
 import socialdj.ConnectedSocket;
 import socialdj.MessageHandler;
+import socialdj.Song;
 import socialdj.config.R;
 import android.content.Context;
 import android.content.Intent;
@@ -18,6 +19,7 @@ import android.content.SharedPreferences;
 import android.graphics.Typeface;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -59,8 +61,47 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 		adapter = new CustomExpandableArtistListAdapter(getActivity(), new ArrayList<Artist>(), new ArrayList<Album>());
 
 		elv.setAdapter(adapter);
+		
+		//Create handler in the thread it should be associated with 
+		//in this case the UI thread
+		final Handler handler = new Handler();
+		Runnable runnable = new Runnable() {
+			boolean running = true;
+			public void run() {
+				while(running){
+					//Do time consuming stuff
+					elv.setOnScrollListener(new ArtistListScrollListener());
 
-        elv.setOnScrollListener(new ArtistListScrollListener());
+					//The handler schedules the new runnable on the UI thread
+					handler.post(new Runnable() {
+						@Override
+						public void run() {
+							synchronized(MessageHandler.getArtists()) {
+								for(Artist item: MessageHandler.getArtists()) {
+									synchronized(adapter) {
+										if(!adapter.contains(item)) {
+											adapter.add(item);
+											adapter.notifyDataSetChanged();
+
+										}
+									}
+								}
+							}
+						}
+					});
+					//Add some downtime
+					try {
+						Thread.sleep(100);
+					}catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+					//running = false;
+				}
+			}
+		};
+		new Thread(runnable).start();
+
+		//elv.setOnScrollListener(new ArtistListScrollListener());
         
         elv.setOnChildClickListener(this);
         return v;
@@ -167,32 +208,33 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 					out.write("list_artists|" + params[0] + "|" + params[1] + "\n");
 					out.flush();
 				} catch (IOException e) {e.printStackTrace();}
-				try {
+				/*try {
 					int start = MessageHandler.getArtists().size();
 					int end = start + params[1];
 					while(start < end) {
 						start = MessageHandler.getArtists().size();
 						Thread.sleep(10);
 					}
-				} catch (InterruptedException e) {e.printStackTrace();}
+				} catch (InterruptedException e) {e.printStackTrace();}*/
 			}
 
-			synchronized(MessageHandler.getArtists()) {
+			/*synchronized(MessageHandler.getArtists()) {
 				for(int i = params[0]; i < ((params[0] + params[1])); i++) 
 					results.add(MessageHandler.getArtists().get(i));
 			}
-			return results;
+			return results;*/
+			return MessageHandler.getArtists();
 		}
 
 		@Override
 		protected void onPostExecute(List<Artist> result) {
-			for(Artist item: result) {
+			/*for(Artist item: result) {
 				synchronized(adapter) {
 					//if(!adapter.contains(item))
 					  adapter.add(item);
 					  adapter.notifyDataSetChanged();
 				}
-			}
+			}*/
 			//System.out.println("adapter count: " + adapter.getCount());
 
 			//loading is done
@@ -226,6 +268,25 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 			this._context = context;
 			this.listArtists = listArtists;
 			this.listAlbums = listAlbums;
+		}
+		
+		/*public boolean contains(Artist item) {
+			synchronized(MessageHandler.getArtists()) {
+				for(Artist r: MessageHandler.getArtists()){
+					if(r.getArtistId().equalsIgnoreCase(item.getArtistId())) {
+						return true;
+					}
+				}
+			}
+			return false;
+		}*/
+		
+		public boolean contains(Artist item) {
+			for(Artist r: listArtists) {
+				if(r.getArtistId().equalsIgnoreCase(item.getArtistId()))
+					return true;
+			}
+			return false;
 		}
 		
 		public void add(Artist artist) {
@@ -311,6 +372,11 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 
 			TextView artistName = (TextView) convertView
 					.findViewById(R.id.artistName);
+			//TEST------------------------------------------
+			TextView id = (TextView) convertView.findViewById(R.id.id);
+			id.setTypeface(null, Typeface.BOLD);
+			id.setText(Integer.toString(groupPosition));
+			//----------------------------------------------
 			artistName.setTypeface(null, Typeface.BOLD);
 			artistName.setText(headerTitle);
 
