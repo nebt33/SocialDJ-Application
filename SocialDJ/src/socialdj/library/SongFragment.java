@@ -55,7 +55,7 @@ public class SongFragment extends ListFragment {
 
 	//Create handler in the thread it should be associated with 
 	//in this case the UI thread
-	final Handler handler = new Handler();
+	Handler handler = new Handler();
 	ViewHandlerScroll viewHandlerScroll = new ViewHandlerScroll();
 	ViewHandlerSearch viewHandlerSearch = new ViewHandlerSearch();
 
@@ -99,7 +99,7 @@ public class SongFragment extends ListFragment {
 	    searchButton.setOnClickListener(new View.OnClickListener() {
 	        @Override
 	        public void onClick(View v) {
-	            System.out.println("Search query: " + searchText.getText().toString());
+	        	System.out.println("ONCLICK BEING CALLED");
 	            //ask server for songs not in cache for similar songs
 	            //---fulfill meta item requirements
 	            MetaItem item = new MetaItem();
@@ -117,6 +117,7 @@ public class SongFragment extends ListFragment {
 	            //stop handler on uiThread for scrolling
 	            viewHandlerScroll.kill();
 	            //search cache for any song that contains this substring
+	            //viewHandlerSearch = new ViewHandlerSearch();
 	            viewHandlerSearch.setQuery(searchText.getText().toString());
 	            new Thread(viewHandlerSearch).start();
 	        }
@@ -161,6 +162,9 @@ public class SongFragment extends ListFragment {
 			 * that this method is called each time the loadMore is reached and scroll
 			 * pressed
 			 */
+			//System.out.println("loadMore: " + loadMore);
+			//System.out.println("totalSizeToBe: " + totalSizeToBe);
+			//System.out.println("totalItemCount: " + totalItemCount);
 			if(loadMore && totalSizeToBe <= totalItemCount) {
 				totalSizeToBe += INCREMENT_TOTAL_MINIMUM_SIZE;
 				//calls more elements
@@ -180,30 +184,55 @@ public class SongFragment extends ListFragment {
 		String query;
 		
 		public void setQuery(String query) {
+			System.out.println("INSIDE setQuery" + query);
 			this.query = query;
+			System.out.println(this.query);
 		}
 		
 		public void run() {
+			System.out.println(query + "query");
 			while(running){
 				//clear adapter, add new items, updateview
-				
+				//getListView().setOnScrollListener(new SongListScrollListener());
 				//The handler schedules the new runnable on the UI thread
 				handler.post(new Runnable() {
 					@Override
 					public void run() {
-						synchronized(adapter) {
-							adapter.clear();
-						}
 						synchronized(MessageHandler.getSongs()) {
-							for(Song item: MessageHandler.getSongs()) {
+							System.out.println("202running" + running);
+							if(query.toLowerCase().equalsIgnoreCase("")) {
 								synchronized(adapter) {
-									if(item.getSongTitle().toLowerCase().contains(query.toLowerCase())) {
-										adapter.add(item);
-										adapter.notifyDataSetChanged();
+									adapter.clear();
+								}
+								running = false;
+								System.out.println("208running" + running);
+								synchronized(MessageHandler.getSongs()) {
+									for(Song item: MessageHandler.getSongs()) {
+										synchronized(adapter) {
+											if(!adapter.contains(item)) {
+												System.out.println("Inside adapter add");
+												adapter.add(item);
+												adapter.notifyDataSetChanged();
+											}
+										}
+									}
+								}
+							} 
+							else {
+								synchronized(adapter) {
+									adapter.clear();
+								}
+								for(Song item: MessageHandler.getSongs()) {
+									synchronized(adapter) {
+										if(item.getSongTitle().toLowerCase().contains(query.toLowerCase())) {
+											adapter.add(item);
+											adapter.notifyDataSetChanged();
+										}
 									}
 								}
 							}
 						}
+						System.out.println("237running" + running);
 					}
 				});
 				//Add some downtime to click on button for queue
@@ -211,6 +240,9 @@ public class SongFragment extends ListFragment {
 					Thread.sleep(1000);
 				}catch (InterruptedException e) {e.printStackTrace();}
 			}
+			System.out.println("244running" + running);
+			running = true;
+			new Thread(viewHandlerScroll).start();
 		}
 
 		public void kill() {
@@ -221,6 +253,7 @@ public class SongFragment extends ListFragment {
 	public class ViewHandlerScroll implements Runnable {
 		boolean running = true;
 		public void run() {
+			//System.out.println("INSIDE SCROLL");
 			while(running){
 				//Do time consuming listener call
 				getListView().setOnScrollListener(new SongListScrollListener());
@@ -230,9 +263,11 @@ public class SongFragment extends ListFragment {
 					@Override
 					public void run() {
 						synchronized(MessageHandler.getSongs()) {
+							//System.out.println("getSongs: " + MessageHandler.getSongs().size());
 							for(Song item: MessageHandler.getSongs()) {
 								synchronized(adapter) {
 									if(!adapter.contains(item)) {
+										//System.out.println("Inside adapter add");
 										adapter.add(item);
 										adapter.notifyDataSetChanged();
 									}
@@ -246,6 +281,7 @@ public class SongFragment extends ListFragment {
 					Thread.sleep(100);
 				}catch (InterruptedException e) {e.printStackTrace();}
 			}
+			running = true;
 		}
 
 		public void kill() {
@@ -270,6 +306,8 @@ public class SongFragment extends ListFragment {
 
 		@Override
 		protected List<Song> doInBackground(Integer... params) {
+			
+			//System.out.println("INSIDE background");
 			List<Song> results = new ArrayList<Song>();
 
 			if(params.length > TOP_ITEM_INDEX)
