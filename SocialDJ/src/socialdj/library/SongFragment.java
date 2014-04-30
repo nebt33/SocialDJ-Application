@@ -3,11 +3,14 @@ package socialdj.library;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import socialdj.Album;
+import socialdj.Artist;
 import socialdj.ConnectedSocket;
 import socialdj.MessageHandler;
+import socialdj.MetaItem;
 import socialdj.SendMessage;
 import socialdj.Song;
 import socialdj.config.R;
@@ -26,6 +29,8 @@ import android.widget.AbsListView;
 import android.widget.AbsListView.OnScrollListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.TextView;
 
@@ -51,8 +56,8 @@ public class SongFragment extends ListFragment {
 	//Create handler in the thread it should be associated with 
 	//in this case the UI thread
 	final Handler handler = new Handler();
-	ViewHandler viewHandler = new ViewHandler();
-
+	ViewHandlerScroll viewHandlerScroll = new ViewHandlerScroll();
+	ViewHandlerSearch viewHandlerSearch = new ViewHandlerSearch();
 
 	@Override
 	public void onActivityCreated(Bundle savedInstanceState) {
@@ -66,10 +71,8 @@ public class SongFragment extends ListFragment {
 		//asynchronously initial list
 		GetSongTask task = new GetSongTask();
 		//task.execute(new Integer[] {0, BLOCK_SIZE});
-
-		setListAdapter(adapter);
 		
-		new Thread(viewHandler).start();
+		new Thread(viewHandlerScroll).start();
 
 		if(savedInstanceState != null) {
 			//Restore last state from top list position
@@ -84,9 +87,41 @@ public class SongFragment extends ListFragment {
 		}
 	}
 	
+	/**
+	 * Search fixed footer for songs.
+	 */
 	@Override 		
-	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {			 			
-		return inflater.inflate(R.layout.footer, container, false); 		
+	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {		
+		//will get weird error if using 3rd party keyboard
+		View v = inflater.inflate(R.layout.footer, container, false);
+		final EditText searchText = (EditText) v.findViewById(R.id.editText);
+		ImageButton searchButton = (ImageButton) v.findViewById(R.id.footerButton);
+	    searchButton.setOnClickListener(new View.OnClickListener() {
+	        @Override
+	        public void onClick(View v) {
+	            System.out.println("Search query: " + searchText.getText().toString());
+	            //ask server for songs not in cache for similar songs
+	            //---fulfill meta item requirements
+	            MetaItem item = new MetaItem();
+	            item.setMetaItem("title");
+	            item.setValue(searchText.getText().toString());
+	            ArrayList<MetaItem> metaItems = new ArrayList<MetaItem>();
+	            metaItems.add(item);
+	            String notCountable = "0";
+	            
+	            //ask server for songs similar to query
+	            SendMessage query = new SendMessage();
+	            query.prepareMessageListSongs(metaItems, notCountable, notCountable);
+	            new Thread(query).start();
+	            
+	            //stop handler on uiThread for scrolling
+	            viewHandlerScroll.kill();
+	            //search cache for any song that contains this substring
+	            viewHandlerSearch.setQuery(searchText.getText().toString());
+	            new Thread(viewHandlerSearch).start();
+	        }
+	    });
+		return v; 		
     }
 
 	/*@Override
@@ -105,7 +140,8 @@ public class SongFragment extends ListFragment {
 	@Override
 	public void onDestroyView() {
 		super.onDestroyView();
-		viewHandler.kill();
+		viewHandlerScroll.kill();
+		viewHandlerSearch.kill();
 	}
 
 	/**
@@ -125,9 +161,6 @@ public class SongFragment extends ListFragment {
 			 * that this method is called each time the loadMore is reached and scroll
 			 * pressed
 			 */
-			/*System.out.println("loadMore: " + loadMore);
-			System.out.println("totalSizetoBe: " + totalSizeToBe);
-			System.out.println("totalItemCount: " + totalItemCount);*/
 			if(loadMore && totalSizeToBe <= totalItemCount) {
 				totalSizeToBe += INCREMENT_TOTAL_MINIMUM_SIZE;
 				//calls more elements
@@ -142,7 +175,50 @@ public class SongFragment extends ListFragment {
 		}
 	}
 	
-	public class ViewHandler implements Runnable {
+	public class ViewHandlerSearch implements Runnable {
+		boolean running = true;
+		String query;
+		
+		public void setQuery(String query) {
+			this.query = query;
+		}
+		
+		public void run() {
+			while(running){
+				//clear adapter, add new items, updateview
+				
+				//The handler schedules the new runnable on the UI thread
+				handler.post(new Runnable() {
+					@Override
+					public void run() {
+						synchronized(adapter) {
+							adapter.clear();
+						}
+						synchronized(MessageHandler.getSongs()) {
+							for(Song item: MessageHandler.getSongs()) {
+								synchronized(adapter) {
+									if(item.getSongTitle().toLowerCase().contains(query.toLowerCase())) {
+										adapter.add(item);
+										adapter.notifyDataSetChanged();
+									}
+								}
+							}
+						}
+					}
+				});
+				//Add some downtime to click on button for queue
+				try {
+					Thread.sleep(1000);
+				}catch (InterruptedException e) {e.printStackTrace();}
+			}
+		}
+
+		public void kill() {
+			running = false;
+		}
+	}
+	
+	public class ViewHandlerScroll implements Runnable {
 		boolean running = true;
 		public void run() {
 			while(running){
@@ -200,41 +276,16 @@ public class SongFragment extends ListFragment {
 				listTopPosition = params[TOP_ITEM_INDEX];
 
 			//excute network call
-			System.out.println("line 143: " + MessageHandler.getSongs().size());
 			if(MessageHandler.getSongs().size() < params[0] + params[1]) {
-				PrintWriter out = null;
-				try {
-					out = new PrintWriter(ConnectedSocket.getSocket().getOutputStream());
-					out.write("list_songs|" + params[0] + "|" + params[1] + "\n");
-					out.flush();
-				} catch (IOException e) {e.printStackTrace();}
-				/*try {
-					int start = MessageHandler.getSongs().size();
-					int end = start + params[1];
-					while(start < end) {
-						start = MessageHandler.getSongs().size();
-						Thread.sleep(10);
-					}
-				} catch (InterruptedException e) {e.printStackTrace();}*/
+				SendMessage list = new SendMessage();
+				list.prepareMessageListSongs(new ArrayList<MetaItem>(), Integer.toString(params[0]), Integer.toString(params[1]));
+				new Thread(list).start();
 			}
-			
-			/*synchronized(MessageHandler.getSongs()) {
-				for(int i = params[0]; i < ((params[0] + params[1])); i++) 
-					results.add(MessageHandler.getSongs().get(i));
-			}
-			return results;*/
 			return MessageHandler.getSongs();
 		}
 
 		@Override
 		protected void onPostExecute(List<Song> result) {
-			/*adapter.setNotifyOnChange(true);
-			for(Song item: result) {
-				synchronized(adapter) {
-					//if(!adapter.contains(item))
-					  adapter.add(item);
-				}
-			}*/
 
 			//loading is done
 			isLoading = false;
@@ -259,17 +310,19 @@ public class SongFragment extends ListFragment {
 		public CustomSongAdapter(Activity context, int rowViewId, List<Song> items) {
 			super(context, rowViewId, items);
 			this.context = context;
-			this.items = items;
+			this.items = Collections.synchronizedList(items);
 			this.rowViewId = rowViewId;
 		}
 
 		public boolean contains(Song item) {
-			for(Song r: items){
-				if(r.getSongId().equals(item.getSongId())) {
-					return true;
+			synchronized(items) {
+				for(Song r: items){
+					if(r.getSongId().equals(item.getSongId())) {
+						return true;
+					}
 				}
+				return false;
 			}
-			return false;
 		}
 
 		public Song getItemAt(int index) {
@@ -294,10 +347,6 @@ public class SongFragment extends ListFragment {
 			artistName =  (TextView) rowView.findViewById(R.id.artistName);
 			songDuration = (TextView) rowView.findViewById(R.id.songDuration);
 			addQButton = (Button) rowView.findViewById(R.id.AddQButton);
-			
-			//--------------------test---------------------------------
-			TextView id = (TextView) rowView.findViewById(R.id.id);
-			id.setText(Integer.toString(position));
 
 			songTitle.setText(items.get(position).getSongTitle());
 			artistName.setText(items.get(position).getArtistName());

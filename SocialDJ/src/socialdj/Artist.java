@@ -6,6 +6,7 @@ public class Artist implements Comparable<Artist> {
 	
 	public Artist(String id) {
 		this.id = id;
+		this.artistName = "";
 	}
 	
 	public void setArtistId(String id) {

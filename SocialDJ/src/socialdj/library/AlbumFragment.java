@@ -3,6 +3,7 @@ package socialdj.library;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -11,6 +12,7 @@ import socialdj.Album;
 import socialdj.Artist;
 import socialdj.ConnectedSocket;
 import socialdj.MessageHandler;
+import socialdj.MetaItem;
 import socialdj.SendMessage;
 import socialdj.Song;
 import socialdj.config.R;
@@ -18,7 +20,7 @@ import socialdj.library.ArtistFragment.ArtistListScrollListener;
 import socialdj.library.SongFragment.CustomSongAdapter;
 import socialdj.library.SongFragment.GetSongTask;
 import socialdj.library.SongFragment.SongListScrollListener;
-import socialdj.library.SongFragment.ViewHandler;
+import socialdj.library.SongFragment.ViewHandlerScroll;
 
 import android.app.Activity;
 import android.content.Context;
@@ -35,6 +37,8 @@ import android.view.View.OnClickListener;
 import android.widget.AbsListView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.AbsListView.OnScrollListener;
@@ -90,6 +94,24 @@ public class AlbumFragment extends ListFragment {
 			}
 		}
 	}
+	
+	/**
+	 * Search fixed footer for songs.
+	 */
+	@Override 		
+	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {		
+		//will get weird error if using 3rd party keyboard
+		View v = inflater.inflate(R.layout.footer, container, false);
+		final EditText searchText = (EditText) v.findViewById(R.id.editText);
+		ImageButton searchButton = (ImageButton) v.findViewById(R.id.footerButton);
+	    searchButton.setOnClickListener(new View.OnClickListener() {
+	        @Override
+	        public void onClick(View v) {
+	            System.out.println("Search query: " + searchText.getText().toString());
+	        }
+	    });
+		return v; 		
+    }
 	
 	public class ViewHandler implements Runnable {
 		boolean running = true;
@@ -257,14 +279,16 @@ public class AlbumFragment extends ListFragment {
 		public CustomAlbumAdapter(Activity context, int rowViewId, List<Album> items) {
 			super(context, rowViewId, items);
 			this.context = context;
-			this.items = items;
+			this.items = Collections.synchronizedList(items);
 			this.rowViewId = rowViewId;
 		}
 
 		public boolean contains(Album item) {
-			for(Album r: items){
-				if(r.getAlbumId().equals(item.getAlbumId())) {
-					return true;
+			synchronized(items) {
+				for(Album r: items){
+					if(r.getAlbumId().equals(item.getAlbumId())) {
+						return true;
+					}
 				}
 			}
 			return false;

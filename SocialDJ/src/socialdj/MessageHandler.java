@@ -177,8 +177,11 @@ public class MessageHandler implements Runnable {
 					break;
 				}
 			}
-			if(artists != null)
-			  Collections.sort(artists);
+		
+			try {
+				if(artists != null)
+					Collections.sort(artists);
+			} catch(NullPointerException p) {p.printStackTrace();}
 		}
 	}
 	
@@ -230,8 +233,10 @@ public class MessageHandler implements Runnable {
 					break;
 				}
 			}
-			if(albums != null)
-			  Collections.sort(albums);
+			try {
+				if(albums != null)
+					Collections.sort(albums);
+			} catch(NullPointerException p) {p.printStackTrace();}
 		}
 	}
 	
@@ -438,8 +443,10 @@ public class MessageHandler implements Runnable {
 				}
 			}
 			//sort songs alphbetically
-			if(songs != null)
-			  Collections.sort(songs);
+			try {
+				if(songs != null)
+					Collections.sort(songs);
+			} catch(NullPointerException p) {p.printStackTrace();}
 		}
 	}
 }
