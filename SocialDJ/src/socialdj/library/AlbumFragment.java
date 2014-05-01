@@ -324,11 +324,6 @@ public class AlbumFragment extends ListFragment {
 					}
 				}
 			}
-			
-			//TEST--------------------------
-			TextView id;
-			id = (TextView) rowView.findViewById(R.id.id);
-			id.setText(Integer.toString(position));
 
 			return rowView;
 		}

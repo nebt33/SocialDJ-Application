@@ -372,11 +372,6 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 
 			TextView artistName = (TextView) convertView
 					.findViewById(R.id.artistName);
-			//TEST------------------------------------------
-			TextView id = (TextView) convertView.findViewById(R.id.id);
-			id.setTypeface(null, Typeface.BOLD);
-			id.setText(Integer.toString(groupPosition));
-			//----------------------------------------------
 			artistName.setTypeface(null, Typeface.BOLD);
 			artistName.setText(headerTitle);
 

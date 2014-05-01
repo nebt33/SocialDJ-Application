@@ -12,10 +12,24 @@ public class QueueElement implements Comparable<QueueElement> {
 		this.score = 0;
 	}
 	
+	public QueueElement(String songTitle, String artistName, String albumName, String songDuration) {
+		this.score = 0;
+		this.songTitle = songTitle;
+		this.artistName = artistName;
+		this.albumName = albumName;
+		this.songDuration = songDuration;
+	}
+	
 	@Override
 	public int compareTo(QueueElement compareElement) {
 		int compareScore = ((QueueElement)compareElement).getScore();
 		return compareScore - this.score;
+	}
+
+	
+	public void vote(int voteValue){
+		score += voteValue;
+		score=score<0?0:score;
 	}
 	
 	public void setScore(int score) {
