@@ -16,6 +16,7 @@ import socialdj.Song;
 import socialdj.config.R;
 import socialdj.library.AlbumFragment.AlbumListScrollListener;
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -32,6 +33,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 /**
@@ -165,6 +167,7 @@ public class SongFragment extends ListFragment {
 			//System.out.println("loadMore: " + loadMore);
 			//System.out.println("totalSizeToBe: " + totalSizeToBe);
 			//System.out.println("totalItemCount: " + totalItemCount);
+			
 			if(loadMore && totalSizeToBe <= totalItemCount) {
 				totalSizeToBe += INCREMENT_TOTAL_MINIMUM_SIZE;
 				//calls more elements
@@ -184,35 +187,42 @@ public class SongFragment extends ListFragment {
 		String query;
 		
 		public void setQuery(String query) {
-			System.out.println("INSIDE setQuery" + query);
 			this.query = query;
-			System.out.println(this.query);
 		}
 		
 		public void run() {
-			System.out.println(query + "query");
 			while(running){
 				//clear adapter, add new items, updateview
-				//getListView().setOnScrollListener(new SongListScrollListener());
 				//The handler schedules the new runnable on the UI thread
 				handler.post(new Runnable() {
 					@Override
 					public void run() {
 						synchronized(MessageHandler.getSongs()) {
-							System.out.println("202running" + running);
 							if(query.toLowerCase().equalsIgnoreCase("")) {
 								synchronized(adapter) {
 									adapter.clear();
 								}
 								running = false;
-								System.out.println("208running" + running);
 								synchronized(MessageHandler.getSongs()) {
-									for(Song item: MessageHandler.getSongs()) {
-										synchronized(adapter) {
-											if(!adapter.contains(item)) {
-												System.out.println("Inside adapter add");
-												adapter.add(item);
-												adapter.notifyDataSetChanged();
+									//if Handler has 100 songs, display first 100
+									if(MessageHandler.getSongs().size() >= BLOCK_SIZE) {
+										System.out.println("INSIDE >= BLOCK_SIZE");
+										for(int i = 0; i < BLOCK_SIZE; i++) {
+											synchronized(adapter) {
+												if(!adapter.contains(MessageHandler.getSongs().get(i))) {
+													adapter.add(MessageHandler.getSongs().get(i));
+													adapter.notifyDataSetChanged();
+												}
+											}
+										}
+									} //else display what the database does have
+									else {
+										for(Song item: MessageHandler.getSongs()) {
+											synchronized(adapter) {
+												if(!adapter.contains(item)) {
+													adapter.add(item);
+													adapter.notifyDataSetChanged();
+												}
 											}
 										}
 									}
@@ -232,7 +242,6 @@ public class SongFragment extends ListFragment {
 								}
 							}
 						}
-						System.out.println("237running" + running);
 					}
 				});
 				//Add some downtime to click on button for queue
@@ -240,7 +249,6 @@ public class SongFragment extends ListFragment {
 					Thread.sleep(1000);
 				}catch (InterruptedException e) {e.printStackTrace();}
 			}
-			System.out.println("244running" + running);
 			running = true;
 			new Thread(viewHandlerScroll).start();
 		}
@@ -252,30 +260,33 @@ public class SongFragment extends ListFragment {
 	
 	public class ViewHandlerScroll implements Runnable {
 		boolean running = true;
+		
 		public void run() {
-			//System.out.println("INSIDE SCROLL");
+			int size = adapter.getList().size();
 			while(running){
 				//Do time consuming listener call
 				getListView().setOnScrollListener(new SongListScrollListener());
 
 				//The handler schedules the new runnable on the UI thread
-				handler.post(new Runnable() {
-					@Override
-					public void run() {
-						synchronized(MessageHandler.getSongs()) {
-							//System.out.println("getSongs: " + MessageHandler.getSongs().size());
-							for(Song item: MessageHandler.getSongs()) {
-								synchronized(adapter) {
-									if(!adapter.contains(item)) {
-										//System.out.println("Inside adapter add");
-										adapter.add(item);
-										adapter.notifyDataSetChanged();
+				if(size != MessageHandler.getSongs().size()) {
+					size = MessageHandler.getSongs().size();
+					handler.post(new Runnable() {
+						@Override
+						public void run() {
+
+							synchronized(MessageHandler.getSongs()) {
+								for(Song item: MessageHandler.getSongs()) {
+									synchronized(adapter) {
+										if(!adapter.contains(item)) {
+											adapter.add(item);
+										}
 									}
 								}
+								adapter.notifyDataSetChanged();
 							}
 						}
-					}
-				});
+					});
+				}
 				//Add some downtime
 				try {
 					Thread.sleep(100);
@@ -324,7 +335,6 @@ public class SongFragment extends ListFragment {
 
 		@Override
 		protected void onPostExecute(List<Song> result) {
-
 			//loading is done
 			isLoading = false;
 
@@ -361,6 +371,10 @@ public class SongFragment extends ListFragment {
 				}
 				return false;
 			}
+		}
+		
+		public List<Song> getList() {
+			return items;
 		}
 
 		public Song getItemAt(int index) {
