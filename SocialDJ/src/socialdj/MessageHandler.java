@@ -8,6 +8,10 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import socialdj.queue.QueueFragment;
+
+import android.widget.Toast;
+
 
 public class MessageHandler implements Runnable {
 
@@ -118,7 +122,9 @@ public class MessageHandler implements Runnable {
 
 
 				}
-			} catch (IOException e) {e.printStackTrace();}
+			} catch (IOException e) {
+                e.printStackTrace();
+              }
 
 			//server was changed
 			if(!ConnectedSocket.getConnectedIP().equals(currentServer))

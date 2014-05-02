@@ -117,7 +117,7 @@ public class ConnectActivity extends Activity {
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		// Inflate the menu; this adds items to the action bar if it is present.
-		getMenuInflater().inflate(R.menu.connect, menu);
+		getMenuInflater().inflate(R.menu.refresh, menu);
 		return true;
 	}
 

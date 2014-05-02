@@ -3,6 +3,7 @@ package socialdj.library;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -11,6 +12,8 @@ import socialdj.Album;
 import socialdj.Artist;
 import socialdj.ConnectedSocket;
 import socialdj.MessageHandler;
+import socialdj.MetaItem;
+import socialdj.SendMessage;
 import socialdj.Song;
 import socialdj.config.R;
 import android.content.Context;
@@ -24,6 +27,8 @@ import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.AbsListView;
 import android.widget.AbsListView.OnScrollListener;
 import android.widget.BaseExpandableListAdapter;
@@ -54,11 +59,12 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 	
 	@Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+		getActivity().getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN);
+	    
         View v = inflater.inflate(R.layout.artist_main, null);
         elv = (ExpandableListView) v.findViewById(R.id.lvExp);
 
-		//adapter = new CustomExpandableArtistListAdapter(getActivity(), MessageHandler.getArtists(), MessageHandler.getAlbums());
-		adapter = new CustomExpandableArtistListAdapter(getActivity(), new ArrayList<Artist>(), new ArrayList<Album>());
+		adapter = new CustomExpandableArtistListAdapter(getActivity(), new ArrayList<Artist>(), new HashMap<Artist,List<Album>>());
 
 		elv.setAdapter(adapter);
 		
@@ -202,27 +208,10 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 
 			//excute network call
 			if(MessageHandler.getArtists().size() < params[0] + params[1]) {
-				PrintWriter out = null;
-				try {
-					out = new PrintWriter(ConnectedSocket.getSocket().getOutputStream());
-					out.write("list_artists|" + params[0] + "|" + params[1] + "\n");
-					out.flush();
-				} catch (IOException e) {e.printStackTrace();}
-				/*try {
-					int start = MessageHandler.getArtists().size();
-					int end = start + params[1];
-					while(start < end) {
-						start = MessageHandler.getArtists().size();
-						Thread.sleep(10);
-					}
-				} catch (InterruptedException e) {e.printStackTrace();}*/
+				SendMessage list = new SendMessage();
+				list.prepareMesssageListArtists(new ArrayList<MetaItem>(), Integer.toString(params[0]), Integer.toString(params[1]));
+				new Thread(list).start();
 			}
-
-			/*synchronized(MessageHandler.getArtists()) {
-				for(int i = params[0]; i < ((params[0] + params[1])); i++) 
-					results.add(MessageHandler.getArtists().get(i));
-			}
-			return results;*/
 			return MessageHandler.getArtists();
 		}
 
@@ -261,25 +250,15 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 		private Context _context;
 		private List<Artist> listArtists; // header titles
 		// child data in format of header title, child title
-		private List<Album> listAlbums;
+		//private List<Album> listAlbums;
+		private HashMap<Artist, List<Album>> listAlbums;
 
 		public CustomExpandableArtistListAdapter(Context context, List<Artist> listArtists,
-				List<Album> listAlbums) {
+				HashMap<Artist, List<Album>> listAlbums) {
 			this._context = context;
 			this.listArtists = listArtists;
 			this.listAlbums = listAlbums;
 		}
-		
-		/*public boolean contains(Artist item) {
-			synchronized(MessageHandler.getArtists()) {
-				for(Artist r: MessageHandler.getArtists()){
-					if(r.getArtistId().equalsIgnoreCase(item.getArtistId())) {
-						return true;
-					}
-				}
-			}
-			return false;
-		}*/
 		
 		public boolean contains(Artist item) {
 			for(Artist r: listArtists) {
@@ -292,23 +271,44 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 		public void add(Artist artist) {
 			listArtists.add(artist);
 			//find albums with artist
+			List<Album> temp = new ArrayList<Album>();
 			synchronized(MessageHandler.getAlbums()) {
 				for(Album a: MessageHandler.getAlbums()) {
 					if(artist.getArtistId().equalsIgnoreCase(a.getArtistId()))
-						listAlbums.add(a);
+						temp.add(a);
+				}
+				
+				//create all albums child
+				if(temp.size() > 0) {
+					Album allAlbums = new Album("-1");
+					for(Album a: temp) {
+						allAlbums.setAlbumName("All Albums");
+						allAlbums.setArtistId(artist.getArtistId());
+						/*for(int i = 0; i < a.getSongs().size(); i++) 
+							allAlbums.addSong(a.getSongs().get(i));*/
+					}
+					temp.add(0,allAlbums);
 				}
 			}
+			
+			//add children
+			listAlbums.put(artist, temp);
 		}
 
 		@Override
 		public Object getChild(int groupPosition, int childPosititon) {
-			for(Album a: MessageHandler.getAlbums()) {
-				if(listArtists.get(groupPosition).getArtistId().equalsIgnoreCase(a.getArtistId())) {
-					return a;
-				}
-			}
+			/*for(Album a: MessageHandler.getAlbums()) {
+				if(listArtists.get(groupPosition).getArtistId().equalsIgnoreCase(a.getArtistId())) 
+					return a;	
+			}*/
+			return listAlbums.get(listArtists.get(groupPosition)).get(childPosititon);
+			
+			/*for(Album a: listAlbums) {
+			  if(listArtists.get(groupPosition).getArtistId().equalsIgnoreCase(a.getArtistId()))
+				  return a;
+			}*/
 			//if not found
-			return "Album not found";
+			//return "Album not found";
 		}
 
 		@Override
@@ -337,22 +337,24 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 
 		@Override
 		public int getChildrenCount(int groupPosition) {
-			int childCount = 0;
+			//Always have all albums
+			/*int childCount = 1;
 			for(Album a: MessageHandler.getAlbums()) {
 				if(a.getArtistId().equalsIgnoreCase(listArtists.get(groupPosition).getArtistId()))
 					childCount++;
 			}
-			return childCount;
+			return childCount;*/
+			return listAlbums.get(listArtists.get(groupPosition)).size();
 		}
 
 		@Override
 		public Object getGroup(int groupPosition) {
-			return this.listArtists.get(groupPosition).getArtistName();
+			return this.listArtists.get(groupPosition);
 		}
 
 		@Override
 		public int getGroupCount() {
-			return this.listArtists.size();
+			return listArtists.size();
 		}
 
 		@Override
@@ -363,7 +365,7 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 		@Override
 		public View getGroupView(int groupPosition, boolean isExpanded,
 				View convertView, ViewGroup parent) {
-			String headerTitle = (String) getGroup(groupPosition);
+			String headerTitle = (String)((Artist)getGroup(groupPosition)).getArtistName();
 			if (convertView == null) {
 				LayoutInflater infalInflater = (LayoutInflater) this._context
 						.getSystemService(Context.LAYOUT_INFLATER_SERVICE);

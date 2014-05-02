@@ -14,13 +14,7 @@ import socialdj.ConnectedSocket;
 import socialdj.MessageHandler;
 import socialdj.MetaItem;
 import socialdj.SendMessage;
-import socialdj.Song;
 import socialdj.config.R;
-import socialdj.library.ArtistFragment.ArtistListScrollListener;
-import socialdj.library.SongFragment.CustomSongAdapter;
-import socialdj.library.SongFragment.GetSongTask;
-import socialdj.library.SongFragment.SongListScrollListener;
-import socialdj.library.SongFragment.ViewHandlerScroll;
 
 import android.app.Activity;
 import android.content.Context;
@@ -31,12 +25,13 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.app.ListFragment;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.View.OnClickListener;
 import android.widget.AbsListView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ListView;
@@ -55,7 +50,7 @@ public class AlbumFragment extends ListFragment {
 	private int totalSizeToBe = 0;
 	//if the data is still sending
 	boolean isLoading = false;
-	//size of next amount of songs
+	//size of next amount of albums
 	private static final int BLOCK_SIZE = 100;
 	//starts thread to load next amount of data 
 	private static final int LOAD_AHEAD_SIZE = 50;
@@ -65,7 +60,8 @@ public class AlbumFragment extends ListFragment {
 	//Create handler in the thread it should be associated with 
 	//in this case the UI thread
 	final Handler handler = new Handler();
-	ViewHandler viewHandler = new ViewHandler();
+	ViewHandlerScroll viewHandlerScroll = new ViewHandlerScroll();
+	ViewHandlerSearch viewHandlerSearch = new ViewHandlerSearch();
 
 
 	@Override
@@ -76,18 +72,18 @@ public class AlbumFragment extends ListFragment {
 		adapter = new CustomAlbumAdapter(getActivity(), R.layout.albums_list, new ArrayList<Album>());
 
 		//asynchronously initial list
-		GetSongTask task = new GetSongTask();
+		GetAlbumTask task = new GetAlbumTask();
 
 		setListAdapter(adapter);
 		
-		new Thread(viewHandler).start();
+		new Thread(viewHandlerScroll).start();
 
 		if(savedInstanceState != null) {
 			//Restore last state from top list position
 			int listTopPosition = savedInstanceState.getInt(PROP_TOP_ITEM, 0);
 
 			//load elements to get to the top of the list
-			task = new GetSongTask();
+			task = new GetAlbumTask();
 			if(listTopPosition > BLOCK_SIZE) {
 				//download asynchronously inital list
 				task.execute(new Integer[] {BLOCK_SIZE, listTopPosition + BLOCK_SIZE, listTopPosition});
@@ -96,7 +92,7 @@ public class AlbumFragment extends ListFragment {
 	}
 	
 	/**
-	 * Search fixed footer for songs.
+	 * Search fixed footer for albums.
 	 */
 	@Override 		
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {		
@@ -104,43 +100,190 @@ public class AlbumFragment extends ListFragment {
 		View v = inflater.inflate(R.layout.footer, container, false);
 		final EditText searchText = (EditText) v.findViewById(R.id.editText);
 		ImageButton searchButton = (ImageButton) v.findViewById(R.id.footerButton);
+		searchText.setHint("Enter an Album Name");
 	    searchButton.setOnClickListener(new View.OnClickListener() {
 	        @Override
 	        public void onClick(View v) {
-	            System.out.println("Search query: " + searchText.getText().toString());
+	        	 //ask server for albums not in cache for similar songs
+	            //---fulfill meta item requirements
+	            MetaItem item = new MetaItem();
+	            item.setMetaItem("album");
+	            item.setValue(searchText.getText().toString());
+	            ArrayList<MetaItem> metaItems = new ArrayList<MetaItem>();
+	            metaItems.add(item);
+	            String notCountable = "0";
+	            
+	            //ask server for albums similar to query
+	            SendMessage query = new SendMessage();
+	            query.prepareMessageListAlbums(metaItems, notCountable, notCountable);
+	            new Thread(query).start();
+	            
+	            //stop handler on uiThread for scrolling
+	            viewHandlerScroll.kill();
+	            //search cache for any album that contains this substring
+	            viewHandlerSearch.setQuery(searchText.getText().toString());
+	            new Thread(viewHandlerSearch).start();
+	            searchText.setText("");
+	            searchText.setHint("Enter an Album Name");
 	        }
 	    });
+	    setHasOptionsMenu(true);  
 		return v; 		
     }
 	
-	public class ViewHandler implements Runnable {
+	@Override
+	public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+	    inflater.inflate(R.menu.refresh, menu);
+	    super.onCreateOptionsMenu(menu,inflater);
+	}
+	
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		switch(item.getItemId()) {
+		//refresh button of endless list
+		case R.id.action_refresh:
+			viewHandlerSearch.kill();
+			handler.post(new Runnable() {
+				@Override
+				public void run() {
+					synchronized(MessageHandler.getAlbums()) {
+						synchronized(adapter) {
+							adapter.clear();
+						}
+						synchronized(MessageHandler.getAlbums()) {
+							//if Handler has 100 albums, display first 100
+							if(MessageHandler.getAlbums().size() >= BLOCK_SIZE) {
+								synchronized(adapter) {
+									for(int i = 0; i < BLOCK_SIZE; i++) {
+										if(!adapter.contains(MessageHandler.getAlbums().get(i))) 
+											adapter.add(MessageHandler.getAlbums().get(i));
+									}
+									Collections.sort(adapter.getList());
+									adapter.notifyDataSetChanged();
+								}
+							} 
+						}
+					}
+					new Thread(viewHandlerScroll).start();
+				}
+			});
+			return true;
+		}
+		return super.onOptionsItemSelected(item);
+	}
+	
+	public class ViewHandlerSearch implements Runnable {
 		boolean running = true;
+		String query;
+		
+		public void setQuery(String query) {
+			this.query = query;
+		}
+		
 		public void run() {
 			while(running){
-				//Do time consuming listener call
-				getListView().setOnScrollListener(new AlbumListScrollListener());
-
+				//clear adapter, add new items, updateview
 				//The handler schedules the new runnable on the UI thread
 				handler.post(new Runnable() {
 					@Override
 					public void run() {
 						synchronized(MessageHandler.getAlbums()) {
-							for(Album item: MessageHandler.getAlbums()) {
+							if(query.toLowerCase().equalsIgnoreCase("")) {
 								synchronized(adapter) {
-									if(!adapter.contains(item)) {
-										adapter.add(item);
-										adapter.notifyDataSetChanged();
+									adapter.clear();
+								}
+								running = false;
+								synchronized(MessageHandler.getAlbums()) {
+									//if Handler has 100 albums, display first 100
+									if(MessageHandler.getAlbums().size() >= BLOCK_SIZE) {
+										System.out.println("INSIDE >= BLOCK_SIZE");
+										for(int i = 0; i < BLOCK_SIZE; i++) {
+											synchronized(adapter) {
+												if(!adapter.contains(MessageHandler.getAlbums().get(i))) {
+													adapter.add(MessageHandler.getAlbums().get(i));
+													adapter.notifyDataSetChanged();
+												}
+											}
+										}
+									} //else display what the database does have
+									else {
+										for(Album item: MessageHandler.getAlbums()) {
+											synchronized(adapter) {
+												if(!adapter.contains(item)) {
+													adapter.add(item);
+													adapter.notifyDataSetChanged();
+												}
+											}
+										}
+									}
+								}
+							} 
+							else {
+								synchronized(adapter) {
+									adapter.clear();
+								}
+								for(Album item: MessageHandler.getAlbums()) {
+									synchronized(adapter) {
+										if(item.getAlbumName().toLowerCase().contains(query.toLowerCase())) {
+											adapter.add(item);
+											adapter.notifyDataSetChanged();
+										}
 									}
 								}
 							}
 						}
 					}
 				});
+				//Add some downtime to click on button for queue
+				try {
+					Thread.sleep(1000);
+				}catch (InterruptedException e) {e.printStackTrace();}
+			}
+			running = true;
+			new Thread(viewHandlerScroll).start();
+		}
+
+		public void kill() {
+			running = false;
+		}
+	}
+	
+	public class ViewHandlerScroll implements Runnable {
+		boolean running = true;
+
+		public void run() {
+			int size = adapter.getList().size();
+			while(running){
+				//Do time consuming listener call
+				getListView().setOnScrollListener(new AlbumListScrollListener());
+
+				//The handler schedules the new runnable on the UI thread
+				if(size != MessageHandler.getAlbums().size()) {
+					size = MessageHandler.getAlbums().size();
+					handler.post(new Runnable() {
+						@Override
+						public void run() {
+
+							synchronized(MessageHandler.getAlbums()) {
+								for(Album item: MessageHandler.getAlbums()) {
+									synchronized(adapter) {
+										if(!adapter.contains(item)) {
+											adapter.add(item);
+										}
+									}
+								}
+								Collections.sort(adapter.getList());
+								adapter.notifyDataSetChanged();
+							}
+						}
+					});
+				}
 				//Add some downtime
 				try {
 					Thread.sleep(100);
 				}catch (InterruptedException e) {e.printStackTrace();}
 			}
+			running = true;
 		}
 
 		public void kill() {
@@ -164,7 +307,8 @@ public class AlbumFragment extends ListFragment {
 	@Override
 	public void onDestroyView() {
 		super.onDestroyView();
-		viewHandler.kill();
+		viewHandlerScroll.kill();
+		viewHandlerSearch.kill();
 	}
 
 	/**
@@ -187,7 +331,7 @@ public class AlbumFragment extends ListFragment {
 			if(loadMore && totalSizeToBe <= totalItemCount) {
 				totalSizeToBe += INCREMENT_TOTAL_MINIMUM_SIZE;
 				//calls more elements
-				GetSongTask task = new GetSongTask();
+				GetAlbumTask task = new GetAlbumTask();
 				task.execute(new Integer[] {totalItemCount, BLOCK_SIZE});
 			}
 		}
@@ -199,10 +343,10 @@ public class AlbumFragment extends ListFragment {
 	}
 
 	/**
-	 * Asynchronous call.  This class is responsible for calling the network for more songs
+	 * Asynchronous call.  This class is responsible for calling the network for more albums
 	 * and managing the isLoading boolean.
 	 */
-	class GetSongTask extends AsyncTask<Integer, Void, List<Album>> {
+	class GetAlbumTask extends AsyncTask<Integer, Void, List<Album>> {
 		private static final int TOP_ITEM_INDEX = 2;
 
 		//position to scroll list to
@@ -222,27 +366,10 @@ public class AlbumFragment extends ListFragment {
 
 			//excute network call
 			if(MessageHandler.getAlbums().size() < params[0] + params[1]) {
-				PrintWriter out = null;
-				try {
-					out = new PrintWriter(ConnectedSocket.getSocket().getOutputStream());
-					out.write("list_albums|" + params[0] + "|" + params[1] + "\n");
-					out.flush();
-				} catch (IOException e) {e.printStackTrace();}
-				/*try {
-					int start = MessageHandler.getAlbums().size();
-					int end = start + params[1];
-					while(start < end) {
-						start = MessageHandler.getAlbums().size();
-						Thread.sleep(10);
-					}
-				} catch (InterruptedException e) {e.printStackTrace();}*/
+					SendMessage list = new SendMessage();
+					list.prepareMessageListAlbums(new ArrayList<MetaItem>(), Integer.toString(params[0]), Integer.toString(params[1]));
+					new Thread(list).start();
 			}
-			
-			/*synchronized(MessageHandler.getAlbums()) {
-				for(int i = params[0]; i < ((params[0] + params[1])); i++) 
-					results.add(MessageHandler.getAlbums().get(i));
-			}
-			return results;*/
 			return MessageHandler.getAlbums();
 		}
 
@@ -281,6 +408,10 @@ public class AlbumFragment extends ListFragment {
 			this.context = context;
 			this.items = Collections.synchronizedList(items);
 			this.rowViewId = rowViewId;
+		}
+		
+		public List<Album> getList() {
+			return items;
 		}
 
 		public boolean contains(Album item) {

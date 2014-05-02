@@ -23,6 +23,9 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.app.ListFragment;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
@@ -35,9 +38,10 @@ import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 /**
- * Fragment for songs.  Show all songs database holds.
+ * Fragment for songs.  Show all songs database holds and search.
  * @author Nathan
  *
  */
@@ -101,7 +105,6 @@ public class SongFragment extends ListFragment {
 	    searchButton.setOnClickListener(new View.OnClickListener() {
 	        @Override
 	        public void onClick(View v) {
-	        	System.out.println("ONCLICK BEING CALLED");
 	            //ask server for songs not in cache for similar songs
 	            //---fulfill meta item requirements
 	            MetaItem item = new MetaItem();
@@ -122,10 +125,54 @@ public class SongFragment extends ListFragment {
 	            //viewHandlerSearch = new ViewHandlerSearch();
 	            viewHandlerSearch.setQuery(searchText.getText().toString());
 	            new Thread(viewHandlerSearch).start();
+	            searchText.setText("");
+	            searchText.setHint("Enter a Song Name");
 	        }
 	    });
+	    setHasOptionsMenu(true);   
 		return v; 		
     }
+	
+	@Override
+	public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+	    inflater.inflate(R.menu.refresh, menu);
+	    super.onCreateOptionsMenu(menu,inflater);
+	}
+	
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		switch(item.getItemId()) {
+		//refresh button of endless list
+		case R.id.action_refresh:
+			viewHandlerSearch.kill();
+			handler.post(new Runnable() {
+				@Override
+				public void run() {
+					synchronized(MessageHandler.getSongs()) {
+						synchronized(adapter) {
+							adapter.clear();
+						}
+						synchronized(MessageHandler.getSongs()) {
+							//if Handler has 100 songs, display first 100
+							if(MessageHandler.getSongs().size() >= BLOCK_SIZE) {
+								synchronized(adapter) {
+									for(int i = 0; i < BLOCK_SIZE; i++) {
+										if(!adapter.contains(MessageHandler.getSongs().get(i)))
+											adapter.add(MessageHandler.getSongs().get(i));
+									}
+									Collections.sort(adapter.getList());
+									adapter.notifyDataSetChanged();
+								}
+							} 
+						}
+					}
+					new Thread(viewHandlerScroll).start();
+				}
+			});
+			return true;
+		}
+		return super.onOptionsItemSelected(item);
+	}
 
 	/*@Override
 	public void onSaveInstanceState(Bundle state) {
@@ -282,6 +329,7 @@ public class SongFragment extends ListFragment {
 										}
 									}
 								}
+								Collections.sort(adapter.getList());
 								adapter.notifyDataSetChanged();
 							}
 						}

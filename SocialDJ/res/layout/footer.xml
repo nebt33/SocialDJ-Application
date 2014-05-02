@@ -6,23 +6,23 @@
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin" >
-    
+
     <EditText
         android:id="@+id/editText"
-        android:layout_alignParentBottom="true"
-        android:layout_width="fill_parent" 
+        android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:hint="@string/search_song">
+        android:layout_alignParentBottom="true"
+        android:hint="@string/search_song" >
     </EditText>
-    
-     <ImageButton
-    	android:id="@+id/footerButton"
-    	android:layout_alignParentBottom="true"
-    	android:layout_width="45dip"
-    	android:layout_height="45dip"
-    	android:src="@drawable/ic_browse"
-    	android:layout_toLeftOf="@+id/editText"
-    	android:layout_alignParentRight="true" />
+
+    <ImageButton
+        android:id="@+id/footerButton"
+        android:layout_width="45dip"
+        android:layout_height="45dip"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+        android:layout_toLeftOf="@+id/editText"
+        android:src="@drawable/ic_browse" />
 
     <ListView 
         android:id="@android:id/list" 

@@ -44,24 +44,21 @@ public class SendMessage implements Runnable {
 	}
 	
 	public void prepareMessageListSongs(ArrayList<MetaItem> metaItems, String start, String count) {
-		message = (listSongs + "|");
+		message = (listSongs + "|" + start + "|" + count +"|");
 		for(MetaItem m: metaItems)
 			message += (m.getMetaItem() + "|" + m.getValue() + "|");
-		message += (start + "|" + count);
 	}
 	
 	public void prepareMessageListAlbums(ArrayList<MetaItem> metaItems, String start, String count) {
-		message = (listAlbums + "|");
+		message = (listAlbums + "|"  + start + "|" + count +"|");
 		for(MetaItem m: metaItems)
 			message += (m.getMetaItem() + "|" + m.getValue() + "|");
-		message += (start + "|" + count);
 	}
 	
 	public void prepareMesssageListArtists(ArrayList<MetaItem> metaItems, String start, String count) {
-		message = (listArtists + "|");
+		message = (listArtists + "|"  + start + "|" + count +"|");
 		for(MetaItem m: metaItems)
 			message += (m.getMetaItem() + "|" + m.getValue() + "|");
-		message += (start + "|" + count);
 	}
 	
 	public void prepareMessageDeleteSong(String id) {
