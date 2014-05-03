@@ -19,6 +19,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class SongActivity extends Activity {
 
@@ -115,6 +116,9 @@ public class SongActivity extends Activity {
 					SendMessage message = new SendMessage();
 					message.prepareMessageAddSong(getItem(currentlyClicked).getSongId());
 					new Thread(message).start();
+					
+					//display nice message for that your request for song has been sent to the server
+					Toast.makeText(getApplicationContext(), "Song request sent", Toast.LENGTH_SHORT).show();
 				} 
 			});
 

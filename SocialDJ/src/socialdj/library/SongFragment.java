@@ -153,20 +153,20 @@ public class SongFragment extends ListFragment {
 							adapter.clear();
 						}
 						synchronized(MessageHandler.getSongs()) {
-							//if Handler has 100 songs, display first 100
-							if(MessageHandler.getSongs().size() >= BLOCK_SIZE) {
-								synchronized(adapter) {
-									for(int i = 0; i < BLOCK_SIZE; i++) {
-										if(!adapter.contains(MessageHandler.getSongs().get(i)))
-											adapter.add(MessageHandler.getSongs().get(i));
+								for(Song item: MessageHandler.getSongs()) {
+									synchronized(adapter) {
+										if(!adapter.contains(item)) {
+											adapter.add(item);
+										}
 									}
+								}
+								synchronized(adapter) {
 									Collections.sort(adapter.getList());
 									adapter.notifyDataSetChanged();
 								}
-							} 
+							//}
 						}
 					}
-					new Thread(viewHandlerScroll).start();
 				}
 			});
 			return true;
@@ -211,9 +211,11 @@ public class SongFragment extends ListFragment {
 			 * that this method is called each time the loadMore is reached and scroll
 			 * pressed
 			 */
-			//System.out.println("loadMore: " + loadMore);
-			//System.out.println("totalSizeToBe: " + totalSizeToBe);
-			//System.out.println("totalItemCount: " + totalItemCount);
+			/*System.out.println("loadMore: " + loadMore);
+			System.out.println("firstVisibleItem: " + firstVisibleItem);
+			System.out.println("visibleItemCount: " + visibleItemCount);
+			System.out.println("totalSizeToBe: " + totalSizeToBe);
+			System.out.println("totalItemCount: " + totalItemCount);*/
 			
 			if(loadMore && totalSizeToBe <= totalItemCount) {
 				totalSizeToBe += INCREMENT_TOTAL_MINIMUM_SIZE;
@@ -253,14 +255,18 @@ public class SongFragment extends ListFragment {
 								synchronized(MessageHandler.getSongs()) {
 									//if Handler has 100 songs, display first 100
 									if(MessageHandler.getSongs().size() >= BLOCK_SIZE) {
-										System.out.println("INSIDE >= BLOCK_SIZE");
 										for(int i = 0; i < BLOCK_SIZE; i++) {
 											synchronized(adapter) {
 												if(!adapter.contains(MessageHandler.getSongs().get(i))) {
 													adapter.add(MessageHandler.getSongs().get(i));
-													adapter.notifyDataSetChanged();
+													//adapter.notifyDataSetChanged();
 												}
 											}
+										}
+
+										synchronized(adapter) {
+											Collections.sort(adapter.getList());
+											adapter.notifyDataSetChanged();
 										}
 									} //else display what the database does have
 									else {
@@ -271,6 +277,10 @@ public class SongFragment extends ListFragment {
 													adapter.notifyDataSetChanged();
 												}
 											}
+										}
+										synchronized(adapter) {
+											Collections.sort(adapter.getList());
+											adapter.notifyDataSetChanged();
 										}
 									}
 								}
@@ -283,9 +293,13 @@ public class SongFragment extends ListFragment {
 									synchronized(adapter) {
 										if(item.getSongTitle().toLowerCase().contains(query.toLowerCase())) {
 											adapter.add(item);
-											adapter.notifyDataSetChanged();
+											//adapter.notifyDataSetChanged();
 										}
 									}
+								}
+								synchronized(adapter) {
+									removeSong();
+									adapter.notifyDataSetChanged();
 								}
 							}
 						}
@@ -305,6 +319,21 @@ public class SongFragment extends ListFragment {
 		}
 	}
 	
+	public void removeSong() {
+		synchronized(adapter) {
+			for(String t: MessageHandler.getForgetSongList()) {
+				for(Song s: adapter.getList()) {
+					if(s.getSongId().equalsIgnoreCase(t)) {
+						adapter.remove(s);
+						//totalSizeToBe -= 1;
+						MessageHandler.getForgetSongList().remove(t);
+						break;
+					}
+				}
+			}
+		}
+	}
+	
 	public class ViewHandlerScroll implements Runnable {
 		boolean running = true;
 		
@@ -320,17 +349,31 @@ public class SongFragment extends ListFragment {
 					handler.post(new Runnable() {
 						@Override
 						public void run() {
-
 							synchronized(MessageHandler.getSongs()) {
 								for(Song item: MessageHandler.getSongs()) {
 									synchronized(adapter) {
 										if(!adapter.contains(item)) {
 											adapter.add(item);
-										}
+										} 
 									}
 								}
 								Collections.sort(adapter.getList());
-								adapter.notifyDataSetChanged();
+							}
+
+							//Forget any song in the queue forget song list
+							synchronized(adapter) {
+								for(String t: MessageHandler.getForgetSongList()) {
+									for(Song s: adapter.getList()) {
+										if(s.getSongId().equalsIgnoreCase(t)) {
+											adapter.remove(s);
+											totalSizeToBe -= 1;
+											System.out.println("INSIDE REMOVE");
+											MessageHandler.getForgetSongList().remove(t);
+											break;
+										}
+									}
+								}
+								adapter.notifyDataSetChanged();		
 							}
 						}
 					});
@@ -365,10 +408,6 @@ public class SongFragment extends ListFragment {
 
 		@Override
 		protected List<Song> doInBackground(Integer... params) {
-			
-			//System.out.println("INSIDE background");
-			List<Song> results = new ArrayList<Song>();
-
 			if(params.length > TOP_ITEM_INDEX)
 				listTopPosition = params[TOP_ITEM_INDEX];
 
@@ -420,9 +459,9 @@ public class SongFragment extends ListFragment {
 				return false;
 			}
 		}
-		
+							
 		public List<Song> getList() {
-			return items;
+				return items;
 		}
 
 		public Song getItemAt(int index) {
@@ -460,6 +499,9 @@ public class SongFragment extends ListFragment {
 					SendMessage message = new SendMessage();
 					message.prepareMessageAddSong(getItem(currentlyClicked).getSongId());
 					new Thread(message).start();
+					
+					//display nice message for that your request for song has been sent to the server
+					Toast.makeText(getActivity(), "Song request sent", Toast.LENGTH_SHORT).show();
 				} 
 			});
 

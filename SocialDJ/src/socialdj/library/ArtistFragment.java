@@ -3,6 +3,7 @@ package socialdj.library;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -16,6 +17,9 @@ import socialdj.MetaItem;
 import socialdj.SendMessage;
 import socialdj.Song;
 import socialdj.config.R;
+import socialdj.library.SongFragment.SongListScrollListener;
+import socialdj.library.SongFragment.ViewHandlerScroll;
+import socialdj.library.SongFragment.ViewHandlerSearch;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -25,6 +29,9 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
@@ -57,8 +64,16 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 	private static final String PROP_TOP_ITEM = "top_list_item";
 	private ExpandableListView elv = null;
 	
+	Handler handler = new Handler();
+	ViewHandlerScroll viewHandlerScroll = new ViewHandlerScroll();
+	//ViewHandlerSearch viewHandlerSearch = new ViewHandlerSearch();
+	
 	@Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+		//make options menu visible
+	    setHasOptionsMenu(true);   
+	    
+		//hides the keyboard on start up
 		getActivity().getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN);
 	    
         View v = inflater.inflate(R.layout.artist_main, null);
@@ -70,7 +85,7 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 		
 		//Create handler in the thread it should be associated with 
 		//in this case the UI thread
-		final Handler handler = new Handler();
+		/*final Handler handler = new Handler();
 		Runnable runnable = new Runnable() {
 			boolean running = true;
 			public void run() {
@@ -105,13 +120,123 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 				}
 			}
 		};
-		new Thread(runnable).start();
-
-		//elv.setOnScrollListener(new ArtistListScrollListener());
+		new Thread(runnable).start();*/
+		new Thread(viewHandlerScroll).start();
         
         elv.setOnChildClickListener(this);
         return v;
     }
+	
+	/**
+	 * Use to clear thread.  This will ensure getListview will be created everytime and get rid of the
+	 * content view not yet being created.
+	 */
+	@Override
+	public void onDestroyView() {
+		super.onDestroyView();
+		viewHandlerScroll.kill();
+		//viewHandlerSearch.kill();
+	}
+	
+	public class ViewHandlerScroll implements Runnable {
+		boolean running = true;
+		
+		public void run() {
+			int size = adapter.getList().size();
+			while(running){
+				//Do time consuming listener call
+				elv.setOnScrollListener(new ArtistListScrollListener());
+
+				//The handler schedules the new runnable on the UI thread
+				if(size != MessageHandler.getArtists().size()) {
+					size = MessageHandler.getArtists().size();
+					handler.post(new Runnable() {
+						@Override
+						public void run() {
+							synchronized(MessageHandler.getArtists()) {
+								for(Artist item: MessageHandler.getArtists()) {
+									synchronized(adapter) {
+										if(!adapter.contains(item)) {
+											adapter.add(item);
+										} 
+									}
+								}
+								Collections.sort(adapter.getList());
+							}
+							adapter.notifyDataSetChanged();	
+
+							//Forget any song in the queue forget song list
+							/*synchronized(adapter) {
+								for(String t: MessageHandler.getForgetSongList()) {
+									for(Song s: adapter.getList()) {
+										if(s.getSongId().equalsIgnoreCase(t)) {
+											adapter.remove(s);
+											totalSizeToBe -= 1;
+											System.out.println("INSIDE REMOVE");
+											MessageHandler.getForgetSongList().remove(t);
+											break;
+										}
+									}
+								}
+								adapter.notifyDataSetChanged();		
+							}*/
+						}
+					});
+				}
+				//Add some downtime
+				try {
+					Thread.sleep(100);
+				}catch (InterruptedException e) {e.printStackTrace();}
+			}
+			running = true;
+		}
+
+		public void kill() {
+			running = false;
+		}
+	}
+	
+	@Override
+	public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+	    inflater.inflate(R.menu.refresh, menu);
+	    super.onCreateOptionsMenu(menu,inflater);
+	}
+	
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		switch(item.getItemId()) {
+		//refresh button of endless list
+		case R.id.action_refresh:
+			/*viewHandlerSearch.kill();
+			handler.post(new Runnable() {
+				@Override
+				public void run() {
+					synchronized(MessageHandler.getSongs()) {
+						synchronized(adapter) {
+							adapter.clear();
+						}
+						synchronized(MessageHandler.getSongs()) {
+								for(Song item: MessageHandler.getSongs()) {
+									synchronized(adapter) {
+										if(!adapter.contains(item)) {
+											adapter.add(item);
+										}
+									}
+								}
+								synchronized(adapter) {
+									Collections.sort(adapter.getList());
+									adapter.notifyDataSetChanged();
+								}
+							//}
+						}
+					}
+				}
+			});*/
+			System.out.println("Refresh pressed");
+			return true;
+		}
+		return super.onOptionsItemSelected(item);
+	}
 	
 	/**
 	 * Listener which handles the endless list.  It is responsible for
@@ -217,14 +342,6 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 
 		@Override
 		protected void onPostExecute(List<Artist> result) {
-			/*for(Artist item: result) {
-				synchronized(adapter) {
-					//if(!adapter.contains(item))
-					  adapter.add(item);
-					  adapter.notifyDataSetChanged();
-				}
-			}*/
-			//System.out.println("adapter count: " + adapter.getCount());
 
 			//loading is done
 			isLoading = false;
@@ -247,15 +364,14 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 
 	public class CustomExpandableArtistListAdapter extends BaseExpandableListAdapter {
 
-		private Context _context;
+		private Context context;
 		private List<Artist> listArtists; // header titles
 		// child data in format of header title, child title
-		//private List<Album> listAlbums;
 		private HashMap<Artist, List<Album>> listAlbums;
 
 		public CustomExpandableArtistListAdapter(Context context, List<Artist> listArtists,
 				HashMap<Artist, List<Album>> listAlbums) {
-			this._context = context;
+			this.context = context;
 			this.listArtists = listArtists;
 			this.listAlbums = listAlbums;
 		}
@@ -266,6 +382,10 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 					return true;
 			}
 			return false;
+		}
+		
+		public List<Artist> getList() {
+			return listArtists;
 		}
 		
 		public void add(Artist artist) {
@@ -297,18 +417,7 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 
 		@Override
 		public Object getChild(int groupPosition, int childPosititon) {
-			/*for(Album a: MessageHandler.getAlbums()) {
-				if(listArtists.get(groupPosition).getArtistId().equalsIgnoreCase(a.getArtistId())) 
-					return a;	
-			}*/
 			return listAlbums.get(listArtists.get(groupPosition)).get(childPosititon);
-			
-			/*for(Album a: listAlbums) {
-			  if(listArtists.get(groupPosition).getArtistId().equalsIgnoreCase(a.getArtistId()))
-				  return a;
-			}*/
-			//if not found
-			//return "Album not found";
 		}
 
 		@Override
@@ -323,7 +432,7 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 			final String childText = (String)((Album)getChild(groupPosition, childPosition)).getAlbumName();
 
 			if (convertView == null) {
-				LayoutInflater infalInflater = (LayoutInflater) this._context
+				LayoutInflater infalInflater = (LayoutInflater) this.context
 						.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 				convertView = infalInflater.inflate(R.layout.artist_list, null);
 			}
@@ -338,12 +447,6 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 		@Override
 		public int getChildrenCount(int groupPosition) {
 			//Always have all albums
-			/*int childCount = 1;
-			for(Album a: MessageHandler.getAlbums()) {
-				if(a.getArtistId().equalsIgnoreCase(listArtists.get(groupPosition).getArtistId()))
-					childCount++;
-			}
-			return childCount;*/
 			return listAlbums.get(listArtists.get(groupPosition)).size();
 		}
 
@@ -367,7 +470,7 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 				View convertView, ViewGroup parent) {
 			String headerTitle = (String)((Artist)getGroup(groupPosition)).getArtistName();
 			if (convertView == null) {
-				LayoutInflater infalInflater = (LayoutInflater) this._context
+				LayoutInflater infalInflater = (LayoutInflater) this.context
 						.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 				convertView = infalInflater.inflate(R.layout.artist_list, null);
 			}
@@ -376,6 +479,9 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 					.findViewById(R.id.artistName);
 			artistName.setTypeface(null, Typeface.BOLD);
 			artistName.setText(headerTitle);
+			
+			//set gap between items
+			elv.setDividerHeight(2);
 
 			return convertView;
 		}

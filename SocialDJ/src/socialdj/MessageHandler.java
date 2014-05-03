@@ -24,10 +24,18 @@ public class MessageHandler implements Runnable {
 	static List<Artist> artists = Collections.synchronizedList(new ArrayList<Artist>());
 	static List<Album> albums = Collections.synchronizedList(new ArrayList<Album>());
     static List<QueueElement> queueElements = Collections.synchronizedList(new ArrayList<QueueElement>());
+    
+    //queue messages of forgets to remove from ui adapter threads
+    static List<String> forgetSongList = Collections.synchronizedList(new ArrayList<String>());
+ 
     static boolean musicState = false;
 	
 	public static List<Song> getSongs() {
 		return songs;
+	}
+	
+	public static List<String> getForgetSongList() {
+		return forgetSongList;
 	}
 	
 	public static List<Artist> getArtists() {
@@ -44,6 +52,17 @@ public class MessageHandler implements Runnable {
 	
 	public static boolean getMusicState() {
 		return musicState;
+	}
+	
+	public static boolean containsSong(Song s) {
+		synchronized(MessageHandler.getSongs()){
+		for(Song item:MessageHandler.getSongs()) {
+			if(item.getSongId().equalsIgnoreCase(s.getSongId()))
+				return true;	
+		}
+		}
+		System.out.println("Size of handler songs" + MessageHandler.getSongs().size());
+		return false;
 	}
 	
 	@Override
@@ -183,11 +202,6 @@ public class MessageHandler implements Runnable {
 					break;
 				}
 			}
-		
-			try {
-				if(artists != null)
-					Collections.sort(artists);
-			} catch(NullPointerException p) {p.printStackTrace();}
 		}
 	}
 	
@@ -239,10 +253,6 @@ public class MessageHandler implements Runnable {
 					break;
 				}
 			}
-			try {
-				if(albums != null)
-					Collections.sort(albums);
-			} catch(NullPointerException p) {p.printStackTrace();}
 		}
 	}
 	
@@ -273,6 +283,9 @@ public class MessageHandler implements Runnable {
 			  }
 			}
 		}
+		
+		//add forget message to list, to remove on ui thread
+		forgetSongList.add(id);
 	}
 	
 	/**
@@ -332,21 +345,10 @@ public class MessageHandler implements Runnable {
 				break;
 			}
 		}
-
-		synchronized (queueElements) {
-		    for(int i = 0; i < queueElements.size(); i++) {
-		      if(element.getScore() > queueElements.get(i).getScore()){
-			   queueElements.add(i, element);
-			   inserted = false;
-			   break;
-		      }
-	        }
-	      }
 		
-		if(!inserted) {
-			synchronized (queueElements) {
-				queueElements.add(element);
-			}
+		synchronized(queueElements) {
+			queueElements.add(element);
+			Collections.sort(queueElements);
 		}
 	}
 	
@@ -436,10 +438,22 @@ public class MessageHandler implements Runnable {
 							metaItem = s;
 						else if(s.equalsIgnoreCase("duration"))
 							metaItem = s;
-						else if(metaItem.equalsIgnoreCase("album"))
-							song.setAlbumName(s);
-						else if(metaItem.equalsIgnoreCase("artist"))
-							song.setArtistName(s);
+						else if(metaItem.equalsIgnoreCase("artist")) {
+							for(Artist search: MessageHandler.getArtists()) {
+								if(search.getArtistId().equalsIgnoreCase(s)) {
+									song.setArtistName(search.getArtistName());
+									break;
+								}
+							}
+						}
+						else if(metaItem.equalsIgnoreCase("album")) {
+							for(Album search: MessageHandler.getAlbums()) {
+								if(search.getAlbumId().equalsIgnoreCase(s)) {
+									song.setAlbumName(search.getAlbumName());
+									break;
+								}
+							}
+						}
 						else if(metaItem.equalsIgnoreCase("title"))
 							song.setSongTitle(s);
 						else if(metaItem.equalsIgnoreCase("duration"))
@@ -448,11 +462,6 @@ public class MessageHandler implements Runnable {
 					break;
 				}
 			}
-			//sort songs alphbetically
-			try {
-				if(songs != null)
-					Collections.sort(songs);
-			} catch(NullPointerException p) {p.printStackTrace();}
 		}
 	}
 }

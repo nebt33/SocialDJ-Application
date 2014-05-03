@@ -61,6 +61,7 @@ public class ConnectActivity extends Activity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+
 		setContentView(R.layout.connect_main);
 
 		//display nice message for user
@@ -130,6 +131,10 @@ public class ConnectActivity extends Activity {
 		 * Gets the address of router connected to.
 		 */
 		final WifiManager manager = (WifiManager) super.getSystemService(WIFI_SERVICE);
+		//check if wifi is enabled
+		if(!manager.isWifiEnabled()) {
+			Toast.makeText(getApplicationContext(), "Please enable Wifi and refresh page", Toast.LENGTH_SHORT).show();
+		}
 		final DhcpInfo dhcp = manager.getDhcpInfo();
 		final String address = Formatter.formatIpAddress(dhcp.gateway);
 
