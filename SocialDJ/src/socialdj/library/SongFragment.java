@@ -122,7 +122,6 @@ public class SongFragment extends ListFragment {
 	            //stop handler on uiThread for scrolling
 	            viewHandlerScroll.kill();
 	            //search cache for any song that contains this substring
-	            //viewHandlerSearch = new ViewHandlerSearch();
 	            viewHandlerSearch.setQuery(searchText.getText().toString());
 	            new Thread(viewHandlerSearch).start();
 	            searchText.setText("");
@@ -153,18 +152,17 @@ public class SongFragment extends ListFragment {
 							adapter.clear();
 						}
 						synchronized(MessageHandler.getSongs()) {
-								for(Song item: MessageHandler.getSongs()) {
-									synchronized(adapter) {
-										if(!adapter.contains(item)) {
-											adapter.add(item);
-										}
+							for(Song item: MessageHandler.getSongs()) {
+								synchronized(adapter) {
+									if(!adapter.contains(item)) {
+										adapter.add(item);
 									}
 								}
-								synchronized(adapter) {
-									Collections.sort(adapter.getList());
-									adapter.notifyDataSetChanged();
-								}
-							//}
+							}
+							synchronized(adapter) {
+								Collections.sort(adapter.getList());
+								adapter.notifyDataSetChanged();
+							}
 						}
 					}
 				}
@@ -253,35 +251,15 @@ public class SongFragment extends ListFragment {
 								}
 								running = false;
 								synchronized(MessageHandler.getSongs()) {
-									//if Handler has 100 songs, display first 100
-									if(MessageHandler.getSongs().size() >= BLOCK_SIZE) {
-										for(int i = 0; i < BLOCK_SIZE; i++) {
-											synchronized(adapter) {
-												if(!adapter.contains(MessageHandler.getSongs().get(i))) {
-													adapter.add(MessageHandler.getSongs().get(i));
-													//adapter.notifyDataSetChanged();
-												}
-											}
-										}
-
+									for(Song item: MessageHandler.getSongs()) {
 										synchronized(adapter) {
-											Collections.sort(adapter.getList());
-											adapter.notifyDataSetChanged();
+											if(!adapter.contains(item)) 
+												adapter.add(item);
 										}
-									} //else display what the database does have
-									else {
-										for(Song item: MessageHandler.getSongs()) {
-											synchronized(adapter) {
-												if(!adapter.contains(item)) {
-													adapter.add(item);
-													adapter.notifyDataSetChanged();
-												}
-											}
-										}
-										synchronized(adapter) {
-											Collections.sort(adapter.getList());
-											adapter.notifyDataSetChanged();
-										}
+									}
+									synchronized(adapter) {
+										Collections.sort(adapter.getList());
+										adapter.notifyDataSetChanged();
 									}
 								}
 							} 
@@ -291,10 +269,8 @@ public class SongFragment extends ListFragment {
 								}
 								for(Song item: MessageHandler.getSongs()) {
 									synchronized(adapter) {
-										if(item.getSongTitle().toLowerCase().contains(query.toLowerCase())) {
+										if(item.getSongTitle().toLowerCase().contains(query.toLowerCase())) 
 											adapter.add(item);
-											//adapter.notifyDataSetChanged();
-										}
 									}
 								}
 								synchronized(adapter) {
@@ -367,7 +343,6 @@ public class SongFragment extends ListFragment {
 										if(s.getSongId().equalsIgnoreCase(t)) {
 											adapter.remove(s);
 											totalSizeToBe -= 1;
-											System.out.println("INSIDE REMOVE");
 											MessageHandler.getForgetSongList().remove(t);
 											break;
 										}
@@ -486,9 +461,17 @@ public class SongFragment extends ListFragment {
 			artistName =  (TextView) rowView.findViewById(R.id.artistName);
 			songDuration = (TextView) rowView.findViewById(R.id.songDuration);
 			addQButton = (Button) rowView.findViewById(R.id.AddQButton);
-
-			songTitle.setText(items.get(position).getSongTitle());
-			artistName.setText(items.get(position).getArtistName());
+			
+			//get string length for display
+			if(items.get(position).getSongTitle().length() > 15) 
+				songTitle.setText(items.get(position).getSongTitle().substring(0,14) + "...");
+			else 
+				songTitle.setText(items.get(position).getSongTitle());
+			
+			if(items.get(position).getArtistName().length() > 15)
+				artistName.setText(items.get(position).getArtistName().substring(0,14) + "..."); 
+			else
+				artistName.setText(items.get(position).getArtistName());
 			songDuration.setText(items.get(position).getSongDuration());
 
 			final int currentlyClicked = position;

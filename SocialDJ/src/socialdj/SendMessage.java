@@ -45,26 +45,16 @@ public class SendMessage implements Runnable {
 	
 	public void prepareMessageListSongs(ArrayList<MetaItem> metaItems, String start, String count) {
 		message = (listSongs + "|" + start + "|" + count);
-		if(metaItems.size() > 0) 
-			message += "|";
 		for(MetaItem m: metaItems)
-			message += (m.getMetaItem() + "|" + m.getValue() + "|");
+			message += ("|" + m.getMetaItem() + "|" + m.getValue());
 	}
 	
-	public void prepareMessageListAlbums(ArrayList<MetaItem> metaItems, String start, String count) {
-		message = (listAlbums + "|"  + start + "|" + count);
-		if(metaItems.size() > 0) 
-			message += "|";
-		for(MetaItem m: metaItems)
-			message += (m.getMetaItem() + "|" + m.getValue() + "|");
+	public void prepareMessageListAlbums(String query, String start, String count) {
+		message = (listAlbums + "|"  + start + "|" + count + "|" + query);
 	}
 	
-	public void prepareMesssageListArtists(ArrayList<MetaItem> metaItems, String start, String count) {
-		message = (listArtists + "|"  + start + "|" + count);
-		if(metaItems.size() > 0) 
-			message += "|";
-		for(MetaItem m: metaItems)
-			message += (m.getMetaItem() + "|" + m.getValue() + "|");
+	public void prepareMesssageListArtists(String query, String start, String count) {
+		message = (listArtists + "|"  + start + "|" + count + "|" + query);
 	}
 	
 	public void prepareMessageDeleteSong(String id) {

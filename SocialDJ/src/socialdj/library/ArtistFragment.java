@@ -39,7 +39,9 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.AbsListView;
 import android.widget.AbsListView.OnScrollListener;
 import android.widget.BaseExpandableListAdapter;
+import android.widget.EditText;
 import android.widget.ExpandableListView;
+import android.widget.ImageButton;
 import android.widget.ExpandableListView.OnChildClickListener;
 import android.widget.TextView;
 
@@ -66,64 +68,52 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 	
 	Handler handler = new Handler();
 	ViewHandlerScroll viewHandlerScroll = new ViewHandlerScroll();
-	//ViewHandlerSearch viewHandlerSearch = new ViewHandlerSearch();
+	ViewHandlerSearch viewHandlerSearch = new ViewHandlerSearch();
 	
 	@Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 		//make options menu visible
-	    setHasOptionsMenu(true);   
+	    setHasOptionsMenu(true);  
 	    
 		//hides the keyboard on start up
 		getActivity().getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN);
 	    
         View v = inflater.inflate(R.layout.artist_main, null);
         elv = (ExpandableListView) v.findViewById(R.id.lvExp);
-
-		adapter = new CustomExpandableArtistListAdapter(getActivity(), new ArrayList<Artist>(), new HashMap<Artist,List<Album>>());
+        
+        adapter = new CustomExpandableArtistListAdapter(getActivity(), new ArrayList<Artist>(), new HashMap<Artist,List<Album>>());
 
 		elv.setAdapter(adapter);
-		
-		//Create handler in the thread it should be associated with 
-		//in this case the UI thread
-		/*final Handler handler = new Handler();
-		Runnable runnable = new Runnable() {
-			boolean running = true;
-			public void run() {
-				while(running){
-					//Do time consuming stuff
-					elv.setOnScrollListener(new ArtistListScrollListener());
 
-					//The handler schedules the new runnable on the UI thread
-					handler.post(new Runnable() {
-						@Override
-						public void run() {
-							synchronized(MessageHandler.getArtists()) {
-								for(Artist item: MessageHandler.getArtists()) {
-									synchronized(adapter) {
-										if(!adapter.contains(item)) {
-											adapter.add(item);
-											adapter.notifyDataSetChanged();
-
-										}
-									}
-								}
-							}
-						}
-					});
-					//Add some downtime
-					try {
-						Thread.sleep(100);
-					}catch (InterruptedException e) {
-						e.printStackTrace();
-					}
-					//running = false;
-				}
-			}
-		};
-		new Thread(runnable).start();*/
-		new Thread(viewHandlerScroll).start();
+		new Thread(viewHandlerScroll,"viewHandlerScroll").start();
         
-        elv.setOnChildClickListener(this);
+        //footer
+	    final EditText searchText = (EditText) v.findViewById(R.id.editText);
+		ImageButton searchButton = (ImageButton) v.findViewById(R.id.footerButton);
+		searchText.setHint("Enter an Artist Name");
+	    searchButton.setOnClickListener(new View.OnClickListener() {
+	        @Override
+	        public void onClick(View v) {
+	            //ask server for songs not in cache for similar songs
+	            //---fulfill meta item requirements
+	            String notCountable = "0";
+	            
+	            //ask server for songs similar to query
+	            SendMessage query = new SendMessage();
+	            query.prepareMesssageListArtists(searchText.getText().toString(), notCountable, notCountable);
+	            new Thread(query).start();
+	            
+	            //stop handler on uiThread for scrolling
+	            viewHandlerScroll.kill();
+	            //search cache for any song that contains this substring
+	            viewHandlerSearch.setQuery(searchText.getText().toString());
+	            new Thread(viewHandlerSearch,"viewHandlerSearch").start();
+	            searchText.setText("");
+	            searchText.setHint("Enter a Artist Name");
+	        }
+	    });
+	    
+	    elv.setOnChildClickListener(this);
         return v;
     }
 	
@@ -135,7 +125,78 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 	public void onDestroyView() {
 		super.onDestroyView();
 		viewHandlerScroll.kill();
-		//viewHandlerSearch.kill();
+		viewHandlerSearch.kill();
+	}
+	
+	public class ViewHandlerSearch implements Runnable {
+		boolean running = true;
+		String query;
+		
+		public void setQuery(String query) {
+			this.query = query;
+		}
+		
+		public void run() {
+			while(running){
+				//clear adapter, add new items, updateview
+				//The handler schedules the new runnable on the UI thread
+				handler.post(new Runnable() {
+					@Override
+					public void run() {
+						synchronized(MessageHandler.getArtists()) {
+							if(query.toLowerCase().equalsIgnoreCase("")) {
+								synchronized(adapter) {
+									adapter.listArtists.clear();
+									adapter.listAlbums.clear();
+								}
+								running = false;
+								synchronized(MessageHandler.getArtists()) {
+									for(Artist item: MessageHandler.getArtists()) {
+										synchronized(adapter) {
+											if(!adapter.listArtists.contains(item)) {
+												adapter.add(item);
+												//adapter.notifyDataSetChanged();
+											}
+										}
+									}
+									synchronized(adapter) {
+										Collections.sort(adapter.getList());
+										adapter.notifyDataSetChanged();
+									}
+								}
+							} 
+							else {
+								synchronized(adapter) {
+									adapter.listArtists.clear();
+									adapter.listAlbums.clear();
+								}
+								for(Artist item: MessageHandler.getArtists()) {
+									synchronized(adapter) {
+										if(item.getArtistName().toLowerCase().contains(query.toLowerCase())) {
+											adapter.add(item);
+										}
+									}
+								}
+								synchronized(adapter) {
+									//removeSong();
+									adapter.notifyDataSetChanged();
+								}
+							}
+						}
+					}
+				});
+				//Add some downtime to click on button for queue
+				try {
+					Thread.sleep(1000);
+				}catch (InterruptedException e) {e.printStackTrace();}
+			}
+			running = true;
+			new Thread(viewHandlerScroll, "viewHandlerScroll").start();
+		}
+
+		public void kill() {
+			running = false;
+		}
 	}
 	
 	public class ViewHandlerScroll implements Runnable {
@@ -207,32 +268,31 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 		switch(item.getItemId()) {
 		//refresh button of endless list
 		case R.id.action_refresh:
-			/*viewHandlerSearch.kill();
+			viewHandlerSearch.kill();
 			handler.post(new Runnable() {
 				@Override
 				public void run() {
-					synchronized(MessageHandler.getSongs()) {
+					synchronized(MessageHandler.getArtists()) {
 						synchronized(adapter) {
-							adapter.clear();
+							adapter.listArtists.clear();
+							adapter.listAlbums.clear();
 						}
-						synchronized(MessageHandler.getSongs()) {
-								for(Song item: MessageHandler.getSongs()) {
-									synchronized(adapter) {
-										if(!adapter.contains(item)) {
-											adapter.add(item);
-										}
+						synchronized(MessageHandler.getArtists()) {
+							for(Artist item: MessageHandler.getArtists()) {
+								synchronized(adapter) {
+									if(!adapter.contains(item)) {
+										adapter.add(item);
 									}
 								}
-								synchronized(adapter) {
-									Collections.sort(adapter.getList());
-									adapter.notifyDataSetChanged();
-								}
-							//}
+							}
+							synchronized(adapter) {
+								Collections.sort(adapter.getList());
+								adapter.notifyDataSetChanged();
+							}
 						}
 					}
 				}
-			});*/
-			System.out.println("Refresh pressed");
+			});
 			return true;
 		}
 		return super.onOptionsItemSelected(item);
@@ -272,11 +332,9 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 	//child listener
 	public boolean onChildClick(ExpandableListView elv, View v,
 			int groupPosition, int childPosition, long id) {
-		//System.out.println("INSIDE ON CHILD CLICK: " + (((Album)elv.getItemAtPosition(childPosition)).getAlbumName()).trim());
 		
 		//get ids of songs in album and save
 		Set<String> set = new HashSet<String>();
-		System.out.println(((Album) adapter.getChild(groupPosition, childPosition)).getSongs());
 		//set.addAll(((Album) elv.getItemAtPosition(childPosition)).getSongs());
 		set.addAll(((Album) adapter.getChild(groupPosition, childPosition)).getSongs());
 		SharedPreferences settings = getActivity().getSharedPreferences("songsInAlbum", Context.MODE_PRIVATE);
@@ -334,7 +392,7 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 			//excute network call
 			if(MessageHandler.getArtists().size() < params[0] + params[1]) {
 				SendMessage list = new SendMessage();
-				list.prepareMesssageListArtists(new ArrayList<MetaItem>(), Integer.toString(params[0]), Integer.toString(params[1]));
+				list.prepareMesssageListArtists("", Integer.toString(params[0]), Integer.toString(params[1]));
 				new Thread(list).start();
 			}
 			return MessageHandler.getArtists();
@@ -394,8 +452,10 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 			List<Album> temp = new ArrayList<Album>();
 			synchronized(MessageHandler.getAlbums()) {
 				for(Album a: MessageHandler.getAlbums()) {
-					if(artist.getArtistId().equalsIgnoreCase(a.getArtistId()))
+					if(artist.getArtistId().equalsIgnoreCase(a.getArtistId())) {
+						System.out.println("artist Id: " + artist.getArtistId() + " | " + a.getArtistId());
 						temp.add(a);
+					}
 				}
 				
 				//create all albums child
@@ -404,8 +464,8 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 					for(Album a: temp) {
 						allAlbums.setAlbumName("All Albums");
 						allAlbums.setArtistId(artist.getArtistId());
-						/*for(int i = 0; i < a.getSongs().size(); i++) 
-							allAlbums.addSong(a.getSongs().get(i));*/
+						for(int i = 0; i < a.getSongs().size(); i++) 
+							allAlbums.addSong(a.getSongs().get(i));
 					}
 					temp.add(0,allAlbums);
 				}
@@ -447,7 +507,7 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 		@Override
 		public int getChildrenCount(int groupPosition) {
 			//Always have all albums
-			return listAlbums.get(listArtists.get(groupPosition)).size();
+			return this.listAlbums.get(listArtists.get(groupPosition)).size();
 		}
 
 		@Override

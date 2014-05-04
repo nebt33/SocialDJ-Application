@@ -14,6 +14,7 @@ import socialdj.ConnectedSocket;
 import socialdj.MessageHandler;
 import socialdj.MetaItem;
 import socialdj.SendMessage;
+import socialdj.Song;
 import socialdj.config.R;
 
 import android.app.Activity;
@@ -106,16 +107,11 @@ public class AlbumFragment extends ListFragment {
 	        public void onClick(View v) {
 	        	 //ask server for albums not in cache for similar songs
 	            //---fulfill meta item requirements
-	            MetaItem item = new MetaItem();
-	            item.setMetaItem("album");
-	            item.setValue(searchText.getText().toString());
-	            ArrayList<MetaItem> metaItems = new ArrayList<MetaItem>();
-	            metaItems.add(item);
 	            String notCountable = "0";
 	            
 	            //ask server for albums similar to query
 	            SendMessage query = new SendMessage();
-	            query.prepareMessageListAlbums(metaItems, notCountable, notCountable);
+	            query.prepareMessageListAlbums(searchText.getText().toString(), notCountable, notCountable);
 	            new Thread(query).start();
 	            
 	            //stop handler on uiThread for scrolling
@@ -151,20 +147,19 @@ public class AlbumFragment extends ListFragment {
 							adapter.clear();
 						}
 						synchronized(MessageHandler.getAlbums()) {
-							//if Handler has 100 albums, display first 100
-							if(MessageHandler.getAlbums().size() >= BLOCK_SIZE) {
-								synchronized(adapter) {
-									for(int i = 0; i < BLOCK_SIZE; i++) {
-										if(!adapter.contains(MessageHandler.getAlbums().get(i))) 
-											adapter.add(MessageHandler.getAlbums().get(i));
+								for(Album item: MessageHandler.getAlbums()) {
+									synchronized(adapter) {
+										if(!adapter.contains(item)) {
+											adapter.add(item);
+										}
 									}
+								}
+								synchronized(adapter) {
 									Collections.sort(adapter.getList());
 									adapter.notifyDataSetChanged();
 								}
-							} 
 						}
 					}
-					new Thread(viewHandlerScroll).start();
 				}
 			});
 			return true;
@@ -194,25 +189,11 @@ public class AlbumFragment extends ListFragment {
 								}
 								running = false;
 								synchronized(MessageHandler.getAlbums()) {
-									//if Handler has 100 albums, display first 100
-									if(MessageHandler.getAlbums().size() >= BLOCK_SIZE) {
-										System.out.println("INSIDE >= BLOCK_SIZE");
-										for(int i = 0; i < BLOCK_SIZE; i++) {
-											synchronized(adapter) {
-												if(!adapter.contains(MessageHandler.getAlbums().get(i))) {
-													adapter.add(MessageHandler.getAlbums().get(i));
-													adapter.notifyDataSetChanged();
-												}
-											}
-										}
-									} //else display what the database does have
-									else {
-										for(Album item: MessageHandler.getAlbums()) {
-											synchronized(adapter) {
-												if(!adapter.contains(item)) {
-													adapter.add(item);
-													adapter.notifyDataSetChanged();
-												}
+									for(Album item: MessageHandler.getAlbums()) {
+										synchronized(adapter) {
+											if(!adapter.contains(item)) {
+												adapter.add(item);
+												adapter.notifyDataSetChanged();
 											}
 										}
 									}
@@ -272,8 +253,22 @@ public class AlbumFragment extends ListFragment {
 										}
 									}
 								}
-								Collections.sort(adapter.getList());
-								adapter.notifyDataSetChanged();
+								
+								//Forget any song in the queue forget song list
+								synchronized(adapter) {
+									for(String t: MessageHandler.getForgetAlbumList()) {
+										for(Album s: adapter.getList()) {
+											if(s.getAlbumId().equalsIgnoreCase(t)) {
+												adapter.remove(s);
+												totalSizeToBe -= 1;
+												MessageHandler.getForgetAlbumList().remove(t);
+												break;
+											}
+										}
+									}
+									Collections.sort(adapter.getList());
+									adapter.notifyDataSetChanged();	
+								}
 							}
 						}
 					});
@@ -367,7 +362,7 @@ public class AlbumFragment extends ListFragment {
 			//excute network call
 			if(MessageHandler.getAlbums().size() < params[0] + params[1]) {
 					SendMessage list = new SendMessage();
-					list.prepareMessageListAlbums(new ArrayList<MetaItem>(), Integer.toString(params[0]), Integer.toString(params[1]));
+					list.prepareMessageListAlbums("", Integer.toString(params[0]), Integer.toString(params[1]));
 					new Thread(list).start();
 			}
 			return MessageHandler.getAlbums();
@@ -375,13 +370,6 @@ public class AlbumFragment extends ListFragment {
 
 		@Override
 		protected void onPostExecute(List<Album> result) {
-			/*adapter.setNotifyOnChange(true);
-			for(Album item: result) {
-				synchronized(adapter) {
-					//if(!adapter.contains(item))
-					  adapter.add(item);
-				}
-			}*/
 
 			//loading is done
 			isLoading = false;
@@ -444,13 +432,20 @@ public class AlbumFragment extends ListFragment {
 			albumName = (TextView) rowView.findViewById(R.id.albumName);
 			artistName =  (TextView) rowView.findViewById(R.id.artistName);
 
-			albumName.setText(items.get(position).getAlbumName());
+			//limit the strings displayed on the screen
+			if(items.get(position).getAlbumName().length() > 15) 
+			  albumName.setText(items.get(position).getAlbumName().substring(0,14) + "...");
+			else
+			  albumName.setText(items.get(position).getAlbumName());
 			
 			//search artists for artist name associated with album
 			synchronized(MessageHandler.getArtists()) {
 				for(Artist a: MessageHandler.getArtists()) {
 					if(a.getArtistId().equalsIgnoreCase(items.get(position).getArtistId())) {
-						artistName.setText(a.getArtistName());
+						if(a.getArtistName().length() > 15)
+						  artistName.setText(a.getArtistName().substring(0,14));
+						else
+						  artistName.setText(a.getArtistName());
 						break;
 					}
 				}
@@ -468,6 +463,7 @@ public class AlbumFragment extends ListFragment {
 	public void onListItemClick (ListView l, View v, int position, long id){	
 		//get ids of songs in album and save
 		Set<String> set = new HashSet<String>();
+		
 		set.addAll(((Album) l.getItemAtPosition(position)).getSongs());
 		SharedPreferences settings = this.getActivity().getSharedPreferences("songsInAlbum", Context.MODE_PRIVATE);
 		SharedPreferences.Editor editor = settings.edit();

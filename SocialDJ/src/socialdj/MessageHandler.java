@@ -27,6 +27,8 @@ public class MessageHandler implements Runnable {
     
     //queue messages of forgets to remove from ui adapter threads
     static List<String> forgetSongList = Collections.synchronizedList(new ArrayList<String>());
+    static List<String> forgetAlbumList = Collections.synchronizedList(new ArrayList<String>());
+    static List<String> forgetArtistList = Collections.synchronizedList(new ArrayList<String>());
  
     static boolean musicState = false;
 	
@@ -36,6 +38,14 @@ public class MessageHandler implements Runnable {
 	
 	public static List<String> getForgetSongList() {
 		return forgetSongList;
+	}
+	
+	public static List<String> getForgetAlbumList() {
+		return forgetAlbumList;
+	}
+	
+	public static List<String> getForgetArtistList(){
+		return forgetArtistList;
 	}
 	
 	public static List<Artist> getArtists() {
@@ -61,7 +71,6 @@ public class MessageHandler implements Runnable {
 				return true;	
 		}
 		}
-		System.out.println("Size of handler songs" + MessageHandler.getSongs().size());
 		return false;
 	}
 	
@@ -217,17 +226,7 @@ public class MessageHandler implements Runnable {
 
 		//search list for album to enter into correct spot
 		synchronized (albums) {
-			boolean inserted = false;
-			for(int i = 0; i < albums.size(); i++) {
-				//if album already exist, break
-				if(Integer.parseInt(album.getAlbumId()) == Integer.parseInt(albums.get(i).getAlbumId())) {
-					inserted = true;
-					break;
-				}
-			}
-			
-			if(!inserted) 
-				albums.add(album);
+			albums.add(album);
 		}
 	}
 	
@@ -247,8 +246,9 @@ public class MessageHandler implements Runnable {
 				if(album.getAlbumId().equalsIgnoreCase(id)){
 					album.setAlbumName(albumName);
 					album.setArtistId(artistId);
-					for(int i = 3; i < temp.size(); i++) {
-						album.addSong(temp.get(i));
+					List<String> ids = Arrays.asList(temp.get(4).split(","));
+					for(int i = 0; i < ids.size(); i++) {
+						album.addSong(ids.get(i));
 					}
 					break;
 				}
@@ -332,7 +332,6 @@ public class MessageHandler implements Runnable {
 	public void addBottom(String inputLine) {
 		List<String> temp = Arrays.asList(inputLine.split("\\|"));
 		String id = temp.get(1);
-		boolean inserted = true;
 		
 		QueueElement element = new QueueElement();
 		element.setSongId(id);
