@@ -445,7 +445,7 @@ public class AlbumFragment extends ListFragment {
 						if(a.getArtistName().length() > 15)
 						  artistName.setText(a.getArtistName().substring(0,14));
 						else
-						  artistName.setText(a.getArtistName());
+						  artistName.setText(a.getArtistName() + "...");
 						break;
 					}
 				}

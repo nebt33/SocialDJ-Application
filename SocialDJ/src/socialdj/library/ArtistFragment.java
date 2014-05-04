@@ -500,7 +500,11 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 			TextView albumName = (TextView) convertView
 					.findViewById(R.id.artistName);
 
-			albumName.setText(childText);
+			if(childText.length() > 15)
+			  albumName.setText(childText.substring(0,14) + "...");
+			else 
+			  albumName.setText(childText);
+			
 			return convertView;
 		}
 
@@ -538,7 +542,10 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 			TextView artistName = (TextView) convertView
 					.findViewById(R.id.artistName);
 			artistName.setTypeface(null, Typeface.BOLD);
-			artistName.setText(headerTitle);
+			if(headerTitle.length() > 15)
+			  artistName.setText(headerTitle.substring(0,14) + "...");
+			else
+			  artistName.setText(headerTitle);
 			
 			//set gap between items
 			elv.setDividerHeight(2);
