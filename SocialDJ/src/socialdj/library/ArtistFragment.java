@@ -41,6 +41,8 @@ import android.widget.AbsListView.OnScrollListener;
 import android.widget.BaseExpandableListAdapter;
 import android.widget.EditText;
 import android.widget.ExpandableListView;
+import android.widget.ExpandableListView.OnGroupClickListener;
+import android.widget.ExpandableListView.OnGroupExpandListener;
 import android.widget.ImageButton;
 import android.widget.ExpandableListView.OnChildClickListener;
 import android.widget.TextView;
@@ -50,7 +52,7 @@ import android.widget.TextView;
  * @author Nathan
  *
  */
-public class ArtistFragment extends Fragment implements OnChildClickListener {
+public class ArtistFragment extends Fragment implements OnChildClickListener, OnGroupClickListener {
 
 	//private CustomAlbumAdapter adapter = null;
 	private CustomExpandableArtistListAdapter adapter = null;
@@ -113,6 +115,7 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 	        }
 	    });
 	    
+	    elv.setOnGroupClickListener(this);
 	    elv.setOnChildClickListener(this);
         return v;
     }
@@ -160,7 +163,7 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 										}
 									}
 									synchronized(adapter) {
-										Collections.sort(adapter.getList());
+										Collections.sort(adapter.getArtistList());
 										adapter.notifyDataSetChanged();
 									}
 								}
@@ -203,14 +206,15 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 		boolean running = true;
 		
 		public void run() {
-			int size = adapter.getList().size();
+			int artistSize = adapter.getArtistList().size();
+			System.out.println(adapter.getAlbumsList().values());
 			while(running){
 				//Do time consuming listener call
 				elv.setOnScrollListener(new ArtistListScrollListener());
 
 				//The handler schedules the new runnable on the UI thread
-				if(size != MessageHandler.getArtists().size()) {
-					size = MessageHandler.getArtists().size();
+				if(artistSize != MessageHandler.getArtists().size()) {
+					artistSize = MessageHandler.getArtists().size();
 					handler.post(new Runnable() {
 						@Override
 						public void run() {
@@ -222,7 +226,7 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 										} 
 									}
 								}
-								Collections.sort(adapter.getList());
+								Collections.sort(adapter.getArtistList());
 							}
 							adapter.notifyDataSetChanged();	
 
@@ -243,7 +247,7 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 							}*/
 						}
 					});
-				}
+				} 
 				//Add some downtime
 				try {
 					Thread.sleep(100);
@@ -286,7 +290,7 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 								}
 							}
 							synchronized(adapter) {
-								Collections.sort(adapter.getList());
+								Collections.sort(adapter.getArtistList());
 								adapter.notifyDataSetChanged();
 							}
 						}
@@ -329,6 +333,23 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 		}
 	}
 	
+	@Override
+	public boolean onGroupClick(ExpandableListView elv, View v, int groupPosition,
+			long id) {
+		//request server for all albums associated with album
+		if(!elv.isGroupExpanded(groupPosition)) {
+			SendMessage message = new SendMessage();
+			MetaItem item = new MetaItem();
+			item.setMetaItem("artist");
+			item.setValue(((Artist)adapter.getGroup(groupPosition)).getArtistId());
+			ArrayList<MetaItem> metaItems = new ArrayList<MetaItem>();
+			metaItems.add(item);
+			message.prepareMessageListAlbums2(metaItems, "0", "0");
+			new Thread(message).start();
+		}
+		return false;
+	}
+
 	//child listener
 	public boolean onChildClick(ExpandableListView elv, View v,
 			int groupPosition, int childPosition, long id) {
@@ -442,8 +463,12 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 			return false;
 		}
 		
-		public List<Artist> getList() {
+		public List<Artist> getArtistList() {
 			return listArtists;
+		}
+		
+		public HashMap<Artist, List<Album>> getAlbumsList() {
+			return listAlbums;
 		}
 		
 		public void add(Artist artist) {
@@ -500,8 +525,8 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 			TextView albumName = (TextView) convertView
 					.findViewById(R.id.artistName);
 
-			if(childText.length() > 15)
-			  albumName.setText(childText.substring(0,14) + "...");
+			if(childText.length() > 20)
+			  albumName.setText(childText.substring(0,19) + "...");
 			else 
 			  albumName.setText(childText);
 			
@@ -543,7 +568,7 @@ public class ArtistFragment extends Fragment implements OnChildClickListener {
 					.findViewById(R.id.artistName);
 			artistName.setTypeface(null, Typeface.BOLD);
 			if(headerTitle.length() > 15)
-			  artistName.setText(headerTitle.substring(0,14) + "...");
+			  artistName.setText(headerTitle.substring(0,19) + "...");
 			else
 			  artistName.setText(headerTitle);
 			

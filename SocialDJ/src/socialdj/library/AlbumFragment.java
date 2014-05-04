@@ -52,9 +52,9 @@ public class AlbumFragment extends ListFragment {
 	//if the data is still sending
 	boolean isLoading = false;
 	//size of next amount of albums
-	private static final int BLOCK_SIZE = 100;
+	private static final int BLOCK_SIZE = 20;
 	//starts thread to load next amount of data 
-	private static final int LOAD_AHEAD_SIZE = 50;
+	private static final int LOAD_AHEAD_SIZE = 10;
 	private static final int INCREMENT_TOTAL_MINIMUM_SIZE = 100;
 	private static final String PROP_TOP_ITEM = "top_list_item";
 	
@@ -433,8 +433,8 @@ public class AlbumFragment extends ListFragment {
 			artistName =  (TextView) rowView.findViewById(R.id.artistName);
 
 			//limit the strings displayed on the screen
-			if(items.get(position).getAlbumName().length() > 15) 
-			  albumName.setText(items.get(position).getAlbumName().substring(0,14) + "...");
+			if(items.get(position).getAlbumName().length() > 26) 
+			  albumName.setText(items.get(position).getAlbumName().substring(0,25) + "...");
 			else
 			  albumName.setText(items.get(position).getAlbumName());
 			
@@ -442,10 +442,10 @@ public class AlbumFragment extends ListFragment {
 			synchronized(MessageHandler.getArtists()) {
 				for(Artist a: MessageHandler.getArtists()) {
 					if(a.getArtistId().equalsIgnoreCase(items.get(position).getArtistId())) {
-						if(a.getArtistName().length() > 15)
-						  artistName.setText(a.getArtistName().substring(0,14));
+						if(a.getArtistName().length() > 26)
+						  artistName.setText(a.getArtistName().substring(0,25) + "...");
 						else
-						  artistName.setText(a.getArtistName() + "...");
+						  artistName.setText(a.getArtistName());
 						break;
 					}
 				}
