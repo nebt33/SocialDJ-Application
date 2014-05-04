@@ -6,7 +6,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import socialdj.Album;
@@ -61,9 +63,9 @@ public class ArtistFragment extends Fragment implements OnChildClickListener, On
 	//if the data is still sending
 	boolean isLoading = false;
 	//size of next amount of songs
-	private static final int BLOCK_SIZE = 100;
+	private static final int BLOCK_SIZE = 20;
 	//starts thread to load next amount of data 
-	private static final int LOAD_AHEAD_SIZE = 50;
+	private static final int LOAD_AHEAD_SIZE = 10;
 	private static final int INCREMENT_TOTAL_MINIMUM_SIZE = 100;
 	private static final String PROP_TOP_ITEM = "top_list_item";
 	private ExpandableListView elv = null;
@@ -204,17 +206,36 @@ public class ArtistFragment extends Fragment implements OnChildClickListener, On
 	
 	public class ViewHandlerScroll implements Runnable {
 		boolean running = true;
-		
+
+		/* (non-Javadoc)
+		 * @see java.lang.Runnable#run()
+		 */
 		public void run() {
 			int artistSize = adapter.getArtistList().size();
-			System.out.println(adapter.getAlbumsList().values());
+			int albumSize = 0;
+			//count up albums
+			for (Artist key : adapter.getAlbumsList().keySet()) {
+				List<Album> value = adapter.getAlbumsList().get(key);
+				if (value != null) 
+					for (Album element : value) {
+						if(!element.getAlbumId().equalsIgnoreCase("-1")) {
+							if (element != null) 
+								albumSize++;
+						}
+					}
+			}
+			
+			System.out.println("album size ::::::::::::::::::" + albumSize);
+
 			while(running){
 				//Do time consuming listener call
 				elv.setOnScrollListener(new ArtistListScrollListener());
 
 				//The handler schedules the new runnable on the UI thread
 				if(artistSize != MessageHandler.getArtists().size()) {
+					//update artistSize
 					artistSize = MessageHandler.getArtists().size();
+
 					handler.post(new Runnable() {
 						@Override
 						public void run() {
@@ -247,7 +268,53 @@ public class ArtistFragment extends Fragment implements OnChildClickListener, On
 							}*/
 						}
 					});
-				} 
+				} else if(albumSize != MessageHandler.getAlbums().size()) {
+
+
+					//update albumSize
+					int albumSizeReset = 0;
+
+					for (Artist key : adapter.getAlbumsList().keySet()) {
+						List<Album> value = adapter.getAlbumsList().get(key);
+						if (value != null) 
+							for (Album element : value) 
+								if (element != null) 
+									albumSizeReset++;
+					}
+
+					albumSize = albumSizeReset;
+
+					synchronized(adapter) {
+						for (Artist key : adapter.getAlbumsList().keySet()) {
+							// gets the value
+							List<Album> albumsInCacheNotInUI = new ArrayList<Album>();
+							synchronized(MessageHandler.getAlbums()) {
+								//for each album in cache
+								for(Album album: MessageHandler.getAlbums()) {
+									//if the album is by the parent artist
+									if(album.getArtistId().equalsIgnoreCase(key.getArtistId())) {
+										//if the album by parent isn't in the UI yet, add it
+										if(!adapter.getAlbumsList().get(key).contains(album)) {
+											albumsInCacheNotInUI.add(album);
+											albumSize++;
+										}
+									}		
+								}
+							}
+
+							
+							List<Album> albumsForArtistInUI  = adapter.getAlbumsList().get(key);
+							albumsForArtistInUI.addAll(albumsInCacheNotInUI);
+							//System.out.println("albumsInCacheNotInUI: " + albumsInCacheNotInUI.size());
+						}
+
+						System.out.println("albumSize: " + albumSize );
+					}
+
+
+
+
+				}
 				//Add some downtime
 				try {
 					Thread.sleep(100);
@@ -478,7 +545,6 @@ public class ArtistFragment extends Fragment implements OnChildClickListener, On
 			synchronized(MessageHandler.getAlbums()) {
 				for(Album a: MessageHandler.getAlbums()) {
 					if(artist.getArtistId().equalsIgnoreCase(a.getArtistId())) {
-						System.out.println("artist Id: " + artist.getArtistId() + " | " + a.getArtistId());
 						temp.add(a);
 					}
 				}
@@ -525,8 +591,8 @@ public class ArtistFragment extends Fragment implements OnChildClickListener, On
 			TextView albumName = (TextView) convertView
 					.findViewById(R.id.artistName);
 
-			if(childText.length() > 20)
-			  albumName.setText(childText.substring(0,19) + "...");
+			if(childText.length() > 30)
+			  albumName.setText(childText.substring(0,29) + "...");
 			else 
 			  albumName.setText(childText);
 			
@@ -567,8 +633,8 @@ public class ArtistFragment extends Fragment implements OnChildClickListener, On
 			TextView artistName = (TextView) convertView
 					.findViewById(R.id.artistName);
 			artistName.setTypeface(null, Typeface.BOLD);
-			if(headerTitle.length() > 15)
-			  artistName.setText(headerTitle.substring(0,19) + "...");
+			if(headerTitle.length() > 30)
+			  artistName.setText(headerTitle.substring(0,29) + "...");
 			else
 			  artistName.setText(headerTitle);
 			
