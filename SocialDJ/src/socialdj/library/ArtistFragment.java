@@ -95,6 +95,7 @@ public class ArtistFragment extends Fragment implements OnChildClickListener, On
 	    final EditText searchText = (EditText) v.findViewById(R.id.editText);
 		ImageButton searchButton = (ImageButton) v.findViewById(R.id.footerButton);
 		searchText.setHint("Enter an Artist Name");
+
 	    searchButton.setOnClickListener(new View.OnClickListener() {
 	        @Override
 	        public void onClick(View v) {
@@ -114,6 +115,11 @@ public class ArtistFragment extends Fragment implements OnChildClickListener, On
 	            new Thread(viewHandlerSearch,"viewHandlerSearch").start();
 	            searchText.setText("");
 	            searchText.setHint("Enter a Artist Name");
+	            InputMethodManager inputManager = (InputMethodManager)
+	            		getActivity().getSystemService(Context.INPUT_METHOD_SERVICE); 
+
+	            inputManager.hideSoftInputFromWindow(getActivity().getCurrentFocus().getWindowToken(),
+	            		InputMethodManager.HIDE_NOT_ALWAYS);
 	        }
 	    });
 	    
@@ -211,18 +217,21 @@ public class ArtistFragment extends Fragment implements OnChildClickListener, On
 		 * @see java.lang.Runnable#run()
 		 */
 		public void run() {
-			int artistSize = adapter.getArtistList().size();
+			int artistSize = 0;
 			int albumSize = 0;
-			//count up albums
-			for (Artist key : adapter.getAlbumsList().keySet()) {
-				List<Album> value = adapter.getAlbumsList().get(key);
-				if (value != null) 
-					for (Album element : value) {
-						if(!element.getAlbumId().equalsIgnoreCase("-1")) {
-							if (element != null) 
-								albumSize++;
+			synchronized(adapter) {
+				artistSize = adapter.getArtistList().size();
+				//count up albums
+				for (Artist key : adapter.getAlbumsList().keySet()) {
+					List<Album> value = adapter.getAlbumsList().get(key);
+					if (value != null) 
+						for (Album element : value) {
+							if(!element.getAlbumId().equalsIgnoreCase("-1")) {
+								if (element != null) 
+									albumSize++;
+							}
 						}
-					}
+				}
 			}
 
 			while(running){

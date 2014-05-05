@@ -31,6 +31,8 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.AbsListView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
@@ -126,6 +128,12 @@ public class AlbumFragment extends ListFragment {
 	            new Thread(viewHandlerSearch).start();
 	            searchText.setText("");
 	            searchText.setHint("Enter an Album Name");
+	            
+	            InputMethodManager inputManager = (InputMethodManager)
+	            		getActivity().getSystemService(Context.INPUT_METHOD_SERVICE); 
+
+	            inputManager.hideSoftInputFromWindow(getActivity().getCurrentFocus().getWindowToken(),
+	            		InputMethodManager.HIDE_NOT_ALWAYS);
 	        }
 	    });
 	    setHasOptionsMenu(true);  

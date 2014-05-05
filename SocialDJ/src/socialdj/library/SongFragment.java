@@ -27,7 +27,9 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.WindowManager;
 import android.view.View.OnClickListener;
+import android.view.inputmethod.InputMethodManager;
 import android.view.ViewGroup;
 import android.widget.AbsListView;
 import android.widget.AbsListView.OnScrollListener;
@@ -126,6 +128,12 @@ public class SongFragment extends ListFragment {
 	            new Thread(viewHandlerSearch).start();
 	            searchText.setText("");
 	            searchText.setHint("Enter a Song Name");
+	            
+	            InputMethodManager inputManager = (InputMethodManager)
+	            		getActivity().getSystemService(Context.INPUT_METHOD_SERVICE); 
+
+	            inputManager.hideSoftInputFromWindow(getActivity().getCurrentFocus().getWindowToken(),
+	            		InputMethodManager.HIDE_NOT_ALWAYS);
 	        }
 	    });
 	    setHasOptionsMenu(true);   
