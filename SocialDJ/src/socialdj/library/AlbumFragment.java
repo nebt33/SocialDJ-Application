@@ -52,9 +52,9 @@ public class AlbumFragment extends ListFragment {
 	//if the data is still sending
 	boolean isLoading = false;
 	//size of next amount of albums
-	private static final int BLOCK_SIZE = 2;
+	private static final int BLOCK_SIZE = 100;
 	//starts thread to load next amount of data 
-	private static final int LOAD_AHEAD_SIZE = 1;
+	private static final int LOAD_AHEAD_SIZE = 50;
 	private static final int INCREMENT_TOTAL_MINIMUM_SIZE = 100;
 	private static final String PROP_TOP_ITEM = "top_list_item";
 	
@@ -111,7 +111,12 @@ public class AlbumFragment extends ListFragment {
 	            
 	            //ask server for albums similar to query
 	            SendMessage query = new SendMessage();
-	            query.prepareMessageListAlbums(searchText.getText().toString(), notCountable, notCountable);
+	            MetaItem item = new MetaItem();
+				item.setMetaItem("album");
+				item.setValue(searchText.getText().toString());
+				ArrayList<MetaItem> metaItems = new ArrayList<MetaItem>();
+				metaItems.add(item);
+	            query.prepareMessageListAlbums(metaItems, notCountable, notCountable);
 	            new Thread(query).start();
 	            
 	            //stop handler on uiThread for scrolling
@@ -362,7 +367,7 @@ public class AlbumFragment extends ListFragment {
 			//excute network call
 			if(MessageHandler.getAlbums().size() < params[0] + params[1]) {
 					SendMessage list = new SendMessage();
-					list.prepareMessageListAlbums("", Integer.toString(params[0]), Integer.toString(params[1]));
+					list.prepareMessageListAlbums(new ArrayList<MetaItem>(), Integer.toString(params[0]), Integer.toString(params[1]));
 					new Thread(list).start();
 			}
 			return MessageHandler.getAlbums();

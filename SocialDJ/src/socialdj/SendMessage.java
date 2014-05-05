@@ -49,11 +49,11 @@ public class SendMessage implements Runnable {
 			message += ("|" + m.getMetaItem() + "|" + m.getValue());
 	}
 	
-	public void prepareMessageListAlbums(String query, String start, String count) {
+	/*public void prepareMessageListAlbums(String query, String start, String count) {
 		message = (listAlbums + "|"  + start + "|" + count + "|" + query);
-	}
+	}*/
 	
-	public void prepareMessageListAlbums2(ArrayList<MetaItem> metaItems, String start, String count) {
+	public void prepareMessageListAlbums(ArrayList<MetaItem> metaItems, String start, String count) {
 		message = (listAlbums + "|" + start + "|" + count);
 		for(MetaItem m: metaItems)
 			message += ("|" + m.getMetaItem() + "|" + m.getValue());

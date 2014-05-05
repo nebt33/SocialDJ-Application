@@ -109,8 +109,15 @@ public class SongActivity extends Activity {
 			songDuration = (TextView) rowView.findViewById(R.id.songDuration);
 			addQButton = (Button) rowView.findViewById(R.id.AddQButton);
 
-			songTitle.setText(items.get(position).getSongTitle());
-			artistName.setText(items.get(position).getArtistName());
+			if(items.get(position).getSongTitle().length() > 35)
+			  songTitle.setText(items.get(position).getSongTitle().substring(0,34) + "...");
+			else 
+				songTitle.setText(items.get(position).getSongTitle());
+			
+			if(items.get(position).getArtistName().length() > 35)
+				artistName.setText(items.get(position).getArtistName().substring(0,35) + "...");
+			else
+			  artistName.setText(items.get(position).getArtistName());
 			songDuration.setText(items.get(position).getSongDuration());
 
 			final int currentlyClicked = position;

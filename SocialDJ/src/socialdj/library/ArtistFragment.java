@@ -63,9 +63,9 @@ public class ArtistFragment extends Fragment implements OnChildClickListener, On
 	//if the data is still sending
 	boolean isLoading = false;
 	//size of next amount of songs
-	private static final int BLOCK_SIZE = 20;
+	private static final int BLOCK_SIZE = 100;
 	//starts thread to load next amount of data 
-	private static final int LOAD_AHEAD_SIZE = 10;
+	private static final int LOAD_AHEAD_SIZE = 50;
 	private static final int INCREMENT_TOTAL_MINIMUM_SIZE = 100;
 	private static final String PROP_TOP_ITEM = "top_list_item";
 	private ExpandableListView elv = null;
@@ -224,8 +224,6 @@ public class ArtistFragment extends Fragment implements OnChildClickListener, On
 						}
 					}
 			}
-			
-			System.out.println("album size ::::::::::::::::::" + albumSize);
 
 			while(running){
 				//Do time consuming listener call
@@ -273,17 +271,19 @@ public class ArtistFragment extends Fragment implements OnChildClickListener, On
 
 					//update albumSize
 					int albumSizeReset = 0;
-
 					for (Artist key : adapter.getAlbumsList().keySet()) {
 						List<Album> value = adapter.getAlbumsList().get(key);
 						if (value != null) 
-							for (Album element : value) 
-								if (element != null) 
-									albumSizeReset++;
+							for (Album element : value) {
+								if(!element.getAlbumId().equalsIgnoreCase("-1")) {
+									if (element != null) 
+										albumSizeReset++;
+								}
+							}
 					}
-
 					albumSize = albumSizeReset;
 
+					//add albums to request group parent called
 					synchronized(adapter) {
 						for (Artist key : adapter.getAlbumsList().keySet()) {
 							// gets the value
@@ -302,13 +302,58 @@ public class ArtistFragment extends Fragment implements OnChildClickListener, On
 								}
 							}
 
-							
 							List<Album> albumsForArtistInUI  = adapter.getAlbumsList().get(key);
 							albumsForArtistInUI.addAll(albumsInCacheNotInUI);
-							//System.out.println("albumsInCacheNotInUI: " + albumsInCacheNotInUI.size());
+							
+							//create all albums child
+							boolean checkChild = false;
+							if(albumsForArtistInUI.size() > 1) {	
+								for(Album a: albumsForArtistInUI) {
+									//there exists an all_albums album
+									if(a.getAlbumId().equalsIgnoreCase("-1")) {
+										checkChild = true;
+										break;
+									}
+								}
+							}
+							
+							if(checkChild) {
+								Album allAlbums = new Album("-1");
+								allAlbums.setAlbumName("All Albums");
+								allAlbums.setArtistId(key.getArtistId());
+								for(int i = 1; i < albumsForArtistInUI.size(); i++) 
+									for(int j = 0; j < albumsForArtistInUI.get(i).getSongs().size(); j++)
+									  allAlbums.addSong(albumsForArtistInUI.get(i).getSongs().get(j));
+								
+								//sort before adding all_albums so on top
+								synchronized(adapter) {
+									Collections.sort(adapter.getAlbumsList().get(key));
+								}
+								adapter.getAlbumsList().get(key).set(0,allAlbums);
+							}
+							else {
+								Album allAlbums = new Album("-1");
+								for(Album a: albumsForArtistInUI) {
+									allAlbums.setAlbumName("All Albums");
+									allAlbums.setArtistId(key.getArtistId());
+									for(int i = 0; i < a.getSongs().size(); i++) 
+										allAlbums.addSong(a.getSongs().get(i));
+								}
+								//sort before adding all_albums album, so on top
+								synchronized(adapter) {
+									Collections.sort(adapter.getAlbumsList().get(key));
+								}
+								adapter.getAlbumsList().get(key).add(0,allAlbums);
+							}
 						}
-
-						System.out.println("albumSize: " + albumSize );
+					}
+					synchronized(adapter) {
+						handler.post(new Runnable() {
+							@Override
+							public void run() {
+								adapter.notifyDataSetChanged();
+							}
+						});
 					}
 
 
@@ -411,7 +456,7 @@ public class ArtistFragment extends Fragment implements OnChildClickListener, On
 			item.setValue(((Artist)adapter.getGroup(groupPosition)).getArtistId());
 			ArrayList<MetaItem> metaItems = new ArrayList<MetaItem>();
 			metaItems.add(item);
-			message.prepareMessageListAlbums2(metaItems, "0", "0");
+			message.prepareMessageListAlbums(metaItems, "0", "0");
 			new Thread(message).start();
 		}
 		return false;
@@ -550,15 +595,17 @@ public class ArtistFragment extends Fragment implements OnChildClickListener, On
 				}
 				
 				//create all albums child
-				if(temp.size() > 0) {
-					Album allAlbums = new Album("-1");
-					for(Album a: temp) {
-						allAlbums.setAlbumName("All Albums");
-						allAlbums.setArtistId(artist.getArtistId());
-						for(int i = 0; i < a.getSongs().size(); i++) 
-							allAlbums.addSong(a.getSongs().get(i));
+				if(temp.size() > 1) {	
+					if(!temp.get(0).getAlbumId().equalsIgnoreCase("-1")){
+						Album allAlbums = new Album("-1");
+						for(Album a: temp) {
+							allAlbums.setAlbumName("All Albums");
+							allAlbums.setArtistId(artist.getArtistId());
+							for(int i = 0; i < a.getSongs().size(); i++) 
+								allAlbums.addSong(a.getSongs().get(i));
+						}
+						temp.add(0,allAlbums);
 					}
-					temp.add(0,allAlbums);
 				}
 			}
 			

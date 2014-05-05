@@ -463,13 +463,13 @@ public class SongFragment extends ListFragment {
 			addQButton = (Button) rowView.findViewById(R.id.AddQButton);
 			
 			//get string length for display
-			if(items.get(position).getSongTitle().length() > 21) 
-				songTitle.setText(items.get(position).getSongTitle().substring(0,20) + "...");
+			if(items.get(position).getSongTitle().length() > 35) 
+				songTitle.setText(items.get(position).getSongTitle().substring(0,34) + "...");
 			else 
 				songTitle.setText(items.get(position).getSongTitle());
 			
-			if(items.get(position).getArtistName().length() > 21)
-				artistName.setText(items.get(position).getArtistName().substring(0,20) + "..."); 
+			if(items.get(position).getArtistName().length() > 35)
+				artistName.setText(items.get(position).getArtistName().substring(0,34) + "..."); 
 			else
 				artistName.setText(items.get(position).getArtistName());
 			songDuration.setText(items.get(position).getSongDuration());
