@@ -26,6 +26,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Typeface;
+import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -43,6 +44,7 @@ import android.widget.AbsListView.OnScrollListener;
 import android.widget.BaseExpandableListAdapter;
 import android.widget.EditText;
 import android.widget.ExpandableListView;
+import android.widget.Toast;
 import android.widget.ExpandableListView.OnGroupClickListener;
 import android.widget.ExpandableListView.OnGroupExpandListener;
 import android.widget.ImageButton;
@@ -76,6 +78,12 @@ public class ArtistFragment extends Fragment implements OnChildClickListener, On
 	
 	@Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+		
+		final WifiManager manager = (WifiManager) super.getActivity().getSystemService(getActivity().WIFI_SERVICE);
+		//check if wifi is enabled
+		if(!manager.isWifiEnabled()) {
+			Toast.makeText(getActivity(), "Please enable Wifi and refresh page", Toast.LENGTH_SHORT).show();
+		}
 		//make options menu visible
 	    setHasOptionsMenu(true);  
 	    
@@ -316,7 +324,8 @@ public class ArtistFragment extends Fragment implements OnChildClickListener, On
 							
 							//create all albums child
 							boolean checkChild = false;
-							if(albumsForArtistInUI.size() > 1) {	
+							int allAlbumsPosition = -1;
+							/*if(albumsForArtistInUI.size() > 1) {	
 								for(Album a: albumsForArtistInUI) {
 									//there exists an all_albums album
 									if(a.getAlbumId().equalsIgnoreCase("-1")) {
@@ -324,9 +333,56 @@ public class ArtistFragment extends Fragment implements OnChildClickListener, On
 										break;
 									}
 								}
+							}*/
+							
+							if(albumsForArtistInUI.size() > 1) {	
+								for(int i = 0; i < albumsForArtistInUI.size(); i++) {
+									//there exists an all_albums album
+									if(albumsForArtistInUI.get(i).getAlbumId().equalsIgnoreCase("-1")) {
+										checkChild = true;
+										allAlbumsPosition = i;
+										break;
+									}
+								}
+								
+								//modify allAllbums
+								if(allAlbumsPosition != -1) {
+								  albumsForArtistInUI.get(allAlbumsPosition).getSongs().clear();
+								  
+								  Album allAlbums = new Album("-1");
+								  allAlbums.setAlbumName("All Albums");
+								  allAlbums.setArtistId(key.getArtistId());
+								  
+								  for(int i = 1; i < albumsForArtistInUI.size(); i++) 
+										for(int j = 0; j < albumsForArtistInUI.get(i).getSongs().size(); j++)
+										  allAlbums.addSong(albumsForArtistInUI.get(i).getSongs().get(j));
+								  
+								  //add all songs to allAlbums
+								  albumsForArtistInUI.get(allAlbumsPosition).getSongs().addAll(allAlbums.getSongs());
+								  synchronized(adapter) {
+										Collections.sort(adapter.getAlbumsList().get(key));
+									}
+								  //so all-albums is shown on top
+								 // albumsForArtistInUI.remove(allAlbumsPosition);
+								 // albumsForArtistInUI.add(0,allAlbums);
+								}
+								else {
+									Album allAlbums = new Album("-1");
+									for(Album a: albumsForArtistInUI) {
+										allAlbums.setAlbumName("All Albums");
+										allAlbums.setArtistId(key.getArtistId());
+										for(int i = 0; i < a.getSongs().size(); i++) 
+											allAlbums.addSong(a.getSongs().get(i));
+									}
+									synchronized(adapter) {
+										Collections.sort(adapter.getAlbumsList().get(key));
+									}
+									adapter.getAlbumsList().get(key).add(0,allAlbums);
+								}
 							}
 							
-							if(checkChild) {
+							
+							/*if(checkChild) {
 								Album allAlbums = new Album("-1");
 								allAlbums.setAlbumName("All Albums");
 								allAlbums.setArtistId(key.getArtistId());
@@ -353,7 +409,7 @@ public class ArtistFragment extends Fragment implements OnChildClickListener, On
 									Collections.sort(adapter.getAlbumsList().get(key));
 								}
 								adapter.getAlbumsList().get(key).add(0,allAlbums);
-							}
+							}*/
 						}
 					}
 					synchronized(adapter) {
@@ -595,31 +651,31 @@ public class ArtistFragment extends Fragment implements OnChildClickListener, On
 		public void add(Artist artist) {
 			listArtists.add(artist);
 			//find albums with artist
-			List<Album> temp = new ArrayList<Album>();
+			List<Album> newAlbums = new ArrayList<Album>();
 			synchronized(MessageHandler.getAlbums()) {
 				for(Album a: MessageHandler.getAlbums()) {
 					if(artist.getArtistId().equalsIgnoreCase(a.getArtistId())) {
-						temp.add(a);
+						newAlbums.add(a);
 					}
 				}
 				
 				//create all albums child
-				if(temp.size() > 1) {	
-					if(!temp.get(0).getAlbumId().equalsIgnoreCase("-1")){
+				if(newAlbums.size() > 1) {	
+					if(!newAlbums.get(0).getAlbumId().equalsIgnoreCase("-1")){
 						Album allAlbums = new Album("-1");
-						for(Album a: temp) {
+						for(Album a: newAlbums) {
 							allAlbums.setAlbumName("All Albums");
 							allAlbums.setArtistId(artist.getArtistId());
 							for(int i = 0; i < a.getSongs().size(); i++) 
 								allAlbums.addSong(a.getSongs().get(i));
 						}
-						temp.add(0,allAlbums);
+						newAlbums.add(0,allAlbums);
 					}
 				}
 			}
 			
 			//add children
-			listAlbums.put(artist, temp);
+			listAlbums.put(artist, newAlbums);
 		}
 
 		@Override

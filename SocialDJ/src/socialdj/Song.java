@@ -17,7 +17,7 @@ public class Song implements Comparable<Song> {
 	
 	@Override
 	public int compareTo(Song song) {
-		return this.getSongTitle().compareTo(song.getSongTitle());
+		return this.getSongTitle().compareToIgnoreCase(song.getSongTitle());
 	}
 	
 	public void setSongTitle(String songTitle) {

@@ -21,6 +21,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -39,6 +40,7 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 import android.widget.AbsListView.OnScrollListener;
 
 /**
@@ -70,6 +72,12 @@ public class AlbumFragment extends ListFragment {
 	@Override
 	public void onActivityCreated(Bundle savedInstanceState) {
 		super.onActivityCreated(savedInstanceState);
+		
+		final WifiManager manager = (WifiManager) super.getActivity().getSystemService(getActivity().WIFI_SERVICE);
+		//check if wifi is enabled
+		if(!manager.isWifiEnabled()) {
+			Toast.makeText(getActivity(), "Please enable Wifi and refresh page", Toast.LENGTH_SHORT).show();
+		}
 
 		//Populate list
 		adapter = new CustomAlbumAdapter(getActivity(), R.layout.albums_list, new ArrayList<Album>());
@@ -114,7 +122,7 @@ public class AlbumFragment extends ListFragment {
 	            //ask server for albums similar to query
 	            SendMessage query = new SendMessage();
 	            MetaItem item = new MetaItem();
-				item.setMetaItem("album");
+				item.setMetaItem("name");
 				item.setValue(searchText.getText().toString());
 				ArrayList<MetaItem> metaItems = new ArrayList<MetaItem>();
 				metaItems.add(item);

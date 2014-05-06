@@ -38,9 +38,7 @@ public class SongActivity extends Activity {
 		ArrayList<Song> songs = new ArrayList<Song>();
 
 		for(int i = 0; i < songIds.size(); i++) {
-			System.out.println("here");
 			for(Song s: MessageHandler.getSongs()) {
-				System.out.println(s.getSongId() + " | " + songIds.get(i));
 				if(s.getSongId().equalsIgnoreCase(songIds.get(i))) {
 					songs.add(s);
 					break;

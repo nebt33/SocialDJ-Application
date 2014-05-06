@@ -4,23 +4,23 @@
     android:layout_height="?android:attr/listPreferredItemHeight"
     android:padding="6dp"
     android:orientation="vertical"
-    android:background="#dddddd" >
+    android:background="#d0d0d0" >
         
     <RadioButton
         android:id="@+id/DownVoteButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="30dp"
+        android:layout_height="49dp"
         android:layout_alignParentLeft="true"
         android:layout_centerVertical="true"
-        android:onClick="voteButton" />
+        android:button="@drawable/button_radio2" />
 
     <RadioButton
         android:id="@+id/UpVoteButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="30dp"
+        android:layout_height="49dp"
         android:layout_alignParentRight="true"
         android:layout_centerVertical="true"
-        android:onClick="voteButton" />
+        android:button="@drawable/button_radio" />
 
     <TextView
         android:id="@+id/QueueArtistName"
@@ -32,31 +32,24 @@
         android:text="Artist" />
 
     <TextView
-        android:id="@+id/QueueSongDuration"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentRight="true"
-        android:layout_marginRight="50dp"
-        android:text="Duration" />
-
-    <TextView
-        android:id="@+id/QueueSongName"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true"
-        android:text="Song"
-        android:textSize="18sp" />
-
-    <TextView
         android:id="@+id/QueueScore"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentRight="true"
         android:layout_centerVertical="true"
-        android:layout_marginRight="30dp"
+        android:layout_marginRight="40dp"
         android:text="0"
+        android:textSize="28sp"
         android:textColor="#00cc00" />
+
+    <TextView
+        android:id="@+id/QueueSongName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_marginLeft="50dp"
+        android:layout_alignTop="@+id/DownVoteButton"
+        android:text="Song"
+        android:textSize="18sp" />
 
 </RelativeLayout>

@@ -360,12 +360,16 @@ public class MessageHandler implements Runnable {
 		String id = temp.get(1);
 		
 		synchronized (queueElements) {
-		    for(QueueElement q: queueElements) {
-			  if(Integer.parseInt(q.getSongId()) == Integer.parseInt(id)){
-				queueElements.remove(q);
-				break;
-			  }
-		  }
+			for(QueueElement q: queueElements) {
+				if(Integer.parseInt(q.getSongId()) == Integer.parseInt(id)){
+					queueElements.remove(q);
+					break;
+				}
+			}
+			if(queueElements.size()>0){
+				Collections.sort(queueElements);
+				queueElements.get(0).setScore(Integer.MAX_VALUE);
+			}
 		}
 	}
 	
@@ -433,7 +437,7 @@ public class MessageHandler implements Runnable {
 							metaItem = s;
 						else if(s.equalsIgnoreCase("artist"))
 							metaItem = s;
-						else if(s.equalsIgnoreCase("title"))
+						else if(s.equalsIgnoreCase("name"))
 							metaItem = s;
 						else if(s.equalsIgnoreCase("duration"))
 							metaItem = s;
@@ -453,7 +457,7 @@ public class MessageHandler implements Runnable {
 								}
 							}
 						}
-						else if(metaItem.equalsIgnoreCase("title"))
+						else if(metaItem.equalsIgnoreCase("name"))
 							song.setSongTitle(s);
 						else if(metaItem.equalsIgnoreCase("duration"))
 							song.setSongDuration(s);

@@ -7,17 +7,25 @@ public class QueueElement implements Comparable<QueueElement> {
 	private String albumName;
 	private String songDuration;
 	private int score;
+	private boolean upvoted = false;
+	private boolean downvoted = false;
 	
 	public QueueElement() {
 		this.score = 0;
 	}
 	
-	public QueueElement(String songTitle, String artistName, String albumName, String songDuration) {
-		this.score = 0;
-		this.songTitle = songTitle;
-		this.artistName = artistName;
-		this.albumName = albumName;
-		this.songDuration = songDuration;
+	public QueueElement(QueueElement other) {
+		this.score = other.score;
+		if(other.songTitle != null)
+			this.songTitle = other.songTitle;
+		if(other.artistName != null)
+			this.artistName = other.artistName;
+		if(other.albumName != null)
+			this.albumName = other.albumName;
+		if(other.songDuration != null)
+			this.songDuration = other.songDuration;
+		if(other.id != null)
+			this.id = other.id;
 	}
 	
 	@Override
@@ -26,10 +34,14 @@ public class QueueElement implements Comparable<QueueElement> {
 		return compareScore - this.score;
 	}
 
-	
-	public void vote(int voteValue){
-		score += voteValue;
-		score=score<0?0:score;
+	public void upVote() {
+		upvoted = true;
+		downvoted = false;
+	}
+
+	public void downVote() {
+		upvoted = false;
+		downvoted = true;
 	}
 	
 	public void setScore(int score) {
@@ -79,4 +91,14 @@ public class QueueElement implements Comparable<QueueElement> {
 	public String getSongDuration() {
 		return songDuration;
 	}
+
+	public boolean isVotedUp() {
+		return upvoted;
+	}
+	
+	public boolean isVotedDown() {
+		return downvoted;
+	}
+	
+	
 }

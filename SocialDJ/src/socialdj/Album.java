@@ -57,6 +57,9 @@ public class Album implements Comparable<Album> {
 
 	@Override
 	public int compareTo(Album album) {
-		return this.getAlbumName().compareTo(album.getAlbumName());
+		if(!album.getAlbumName().equalsIgnoreCase("All Albums"))
+		  return this.getAlbumName().compareToIgnoreCase(album.getAlbumName());
+		else
+		  return 0;
 	}
 }

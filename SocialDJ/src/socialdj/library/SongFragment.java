@@ -18,6 +18,7 @@ import socialdj.library.AlbumFragment.AlbumListScrollListener;
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -70,6 +71,12 @@ public class SongFragment extends ListFragment {
 	@Override
 	public void onActivityCreated(Bundle savedInstanceState) {
 		super.onActivityCreated(savedInstanceState);
+		
+		final WifiManager manager = (WifiManager) super.getActivity().getSystemService(getActivity().WIFI_SERVICE);
+		//check if wifi is enabled
+		if(!manager.isWifiEnabled()) {
+			Toast.makeText(getActivity(), "Please enable Wifi and refresh page", Toast.LENGTH_SHORT).show();
+		}
 
 		//Populate list
 		adapter = new CustomSongAdapter(getActivity(), R.layout.songs_list, new ArrayList<Song>());
@@ -110,7 +117,7 @@ public class SongFragment extends ListFragment {
 	            //ask server for songs not in cache for similar songs
 	            //---fulfill meta item requirements
 	            MetaItem item = new MetaItem();
-	            item.setMetaItem("title");
+	            item.setMetaItem("name");
 	            item.setValue(searchText.getText().toString());
 	            ArrayList<MetaItem> metaItems = new ArrayList<MetaItem>();
 	            metaItems.add(item);
