@@ -211,9 +211,6 @@ public class MainActivity extends FragmentActivity {
         }
  
         if (fragment != null) {
-            /*FragmentManager fragmentManager = getFragmentManager();
-            fragmentManager.beginTransaction()
-                    .replace(R.id.frame_container, fragment).commit();*/
             fragmentManager.beginTransaction().add(R.id.frame_container, fragment).addToBackStack("fragback").commit();
 
             // update selected item and title, then close the drawer

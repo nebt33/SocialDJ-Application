@@ -224,11 +224,6 @@ public class SongFragment extends ListFragment {
 			 * that this method is called each time the loadMore is reached and scroll
 			 * pressed
 			 */
-			/*System.out.println("loadMore: " + loadMore);
-			System.out.println("firstVisibleItem: " + firstVisibleItem);
-			System.out.println("visibleItemCount: " + visibleItemCount);
-			System.out.println("totalSizeToBe: " + totalSizeToBe);
-			System.out.println("totalItemCount: " + totalItemCount);*/
 			
 			if(loadMore && totalSizeToBe <= totalItemCount) {
 				totalSizeToBe += INCREMENT_TOTAL_MINIMUM_SIZE;

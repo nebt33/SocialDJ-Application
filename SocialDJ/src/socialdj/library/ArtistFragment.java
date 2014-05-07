@@ -265,22 +265,6 @@ public class ArtistFragment extends Fragment implements OnChildClickListener, On
 								Collections.sort(adapter.getArtistList());
 							}
 							adapter.notifyDataSetChanged();	
-
-							//Forget any song in the queue forget song list
-							/*synchronized(adapter) {
-								for(String t: MessageHandler.getForgetSongList()) {
-									for(Song s: adapter.getList()) {
-										if(s.getSongId().equalsIgnoreCase(t)) {
-											adapter.remove(s);
-											totalSizeToBe -= 1;
-											System.out.println("INSIDE REMOVE");
-											MessageHandler.getForgetSongList().remove(t);
-											break;
-										}
-									}
-								}
-								adapter.notifyDataSetChanged();		
-							}*/
 						}
 					});
 				} else if(albumSize != MessageHandler.getAlbums().size()) {
@@ -325,15 +309,6 @@ public class ArtistFragment extends Fragment implements OnChildClickListener, On
 							//create all albums child
 							boolean checkChild = false;
 							int allAlbumsPosition = -1;
-							/*if(albumsForArtistInUI.size() > 1) {	
-								for(Album a: albumsForArtistInUI) {
-									//there exists an all_albums album
-									if(a.getAlbumId().equalsIgnoreCase("-1")) {
-										checkChild = true;
-										break;
-									}
-								}
-							}*/
 							
 							if(albumsForArtistInUI.size() > 1) {	
 								for(int i = 0; i < albumsForArtistInUI.size(); i++) {
@@ -362,9 +337,6 @@ public class ArtistFragment extends Fragment implements OnChildClickListener, On
 								  synchronized(adapter) {
 										Collections.sort(adapter.getAlbumsList().get(key));
 									}
-								  //so all-albums is shown on top
-								 // albumsForArtistInUI.remove(allAlbumsPosition);
-								 // albumsForArtistInUI.add(0,allAlbums);
 								}
 								else {
 									Album allAlbums = new Album("-1");
@@ -380,36 +352,6 @@ public class ArtistFragment extends Fragment implements OnChildClickListener, On
 									adapter.getAlbumsList().get(key).add(0,allAlbums);
 								}
 							}
-							
-							
-							/*if(checkChild) {
-								Album allAlbums = new Album("-1");
-								allAlbums.setAlbumName("All Albums");
-								allAlbums.setArtistId(key.getArtistId());
-								for(int i = 1; i < albumsForArtistInUI.size(); i++) 
-									for(int j = 0; j < albumsForArtistInUI.get(i).getSongs().size(); j++)
-									  allAlbums.addSong(albumsForArtistInUI.get(i).getSongs().get(j));
-								
-								//sort before adding all_albums so on top
-								synchronized(adapter) {
-									Collections.sort(adapter.getAlbumsList().get(key));
-								}
-								adapter.getAlbumsList().get(key).set(0,allAlbums);
-							}
-							else {
-								Album allAlbums = new Album("-1");
-								for(Album a: albumsForArtistInUI) {
-									allAlbums.setAlbumName("All Albums");
-									allAlbums.setArtistId(key.getArtistId());
-									for(int i = 0; i < a.getSongs().size(); i++) 
-										allAlbums.addSong(a.getSongs().get(i));
-								}
-								//sort before adding all_albums album, so on top
-								synchronized(adapter) {
-									Collections.sort(adapter.getAlbumsList().get(key));
-								}
-								adapter.getAlbumsList().get(key).add(0,allAlbums);
-							}*/
 						}
 					}
 					synchronized(adapter) {

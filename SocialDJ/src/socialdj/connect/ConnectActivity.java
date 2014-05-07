@@ -257,9 +257,6 @@ public class ConnectActivity extends Activity {
 						ConnectTask connect = new ConnectTask();
 						connect.execute(temp.getText().toString().trim());
 						
-						//if (currentlyClicked == v)
-							//return;
-						
 						//catch exception if radio button(server) no longer exists
 						try {
 							currentlyClicked.setChecked(false);
